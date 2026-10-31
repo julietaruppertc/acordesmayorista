@@ -21,3 +21,9 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+shared/keys/private.pem
+*.pem
+!shared/keys/public.pem
+
+.env
+services/auth-service/.env
