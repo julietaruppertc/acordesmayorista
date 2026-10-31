@@ -1,0 +1,11 @@
+{
+  "data": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "userId": "mongo-user-id",
+    "status": "PENDING_PAYMENT",
+    "total": 500000,
+    "expiresAt": "2026-10-31T21:00:00.000Z",
+    "createdAt": "2026-10-31T20:55:00.000Z"
+  },
+  "traceId": "trace-example-001"
+}

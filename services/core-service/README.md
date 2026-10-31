@@ -19,6 +19,7 @@ Gestiona catálogo, inventario, reservas, pedidos, pagos simulados y eventos Out
 - Worker de notificaciones: `npm run worker`
 - Expiración de reservas: `npm run expire-reservations`
 - Pruebas: `npm test`
+- Demostración de concurrencia e idempotencia: `npm run demo:critical`
 
 ## Rutas
 
@@ -74,3 +75,12 @@ X-Trace-Id: identificador de la operación
 ```
 
 Estos nombres coinciden con los valores que actualmente emite el servicio Auth.
+
+## Pruebas manuales y contratos
+
+- Solicitudes para la extensión REST Client: `requests/core.http`.
+- Contratos compartidos: `shared/contracts/core` desde la raíz del repositorio.
+- Guía para los otros integrantes: `docs/core-service-integration.md`.
+- Decisiones: `docs/core-service-decisions.md`.
+
+La suite automatizada requiere PostgreSQL con las migraciones y semillas aplicadas. Incluye diez checkouts simultáneos, webhooks repetidos, pago rechazado, vencimiento, pago tardío, permisos, rollback completo y procesamiento de Outbox.

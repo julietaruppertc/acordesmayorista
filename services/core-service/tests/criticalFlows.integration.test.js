@@ -50,22 +50,28 @@ afterAll(async () => {
 });
 
 describe('Flujos críticos con PostgreSQL', () => {
-  it('acepta una sola reserva cuando dos checkouts compiten por una unidad', async () => {
+  it('acepta una sola reserva cuando diez checkouts compiten por una unidad', async () => {
     const payload = {
       items: [{ productId, quantity: 1, expectedVersion: 1 }]
     };
 
-    const [first, second] = await Promise.all([
-      request(app).post('/api/orders/checkout').set(identityHeaders).send(payload),
-      request(app).post('/api/orders/checkout').set(identityHeaders).send(payload)
-    ]);
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(app).post('/api/orders/checkout').set(identityHeaders).send(payload)
+      )
+    );
 
-    const responses = [first, second];
-    const success = responses.find((response) => response.status === 201);
-    const conflict = responses.find((response) => response.status === 409);
+    const successes = responses.filter((response) => response.status === 201);
+    const conflicts = responses.filter((response) => response.status === 409);
 
-    expect(success).toBeTruthy();
-    expect(conflict).toBeTruthy();
+    expect(successes).toHaveLength(1);
+    expect(conflicts).toHaveLength(9);
+    expect(
+      conflicts.every((response) =>
+        ['STOCK_VERSION_CONFLICT', 'INSUFFICIENT_STOCK'].includes(response.body.error)
+      )
+    ).toBe(true);
+    const success = successes[0];
     orderId = success.body.data.id;
 
     const stock = await pool.query(

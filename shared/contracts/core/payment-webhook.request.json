@@ -1,0 +1,6 @@
+{
+  "paymentId": "PAY-DEMO-001",
+  "orderId": "22222222-2222-4222-8222-222222222222",
+  "status": "APPROVED",
+  "amount": 500000
+}

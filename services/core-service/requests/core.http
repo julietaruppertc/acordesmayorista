@@ -1,0 +1,77 @@
+@baseUrl = http://localhost:4002
+@traceId = manual-test-001
+@userId = dev-user-001
+@productId = REEMPLAZAR_CON_UUID_DEL_CATALOGO
+@orderId = REEMPLAZAR_CON_UUID_DEL_CHECKOUT
+@version = 1
+
+### Estado del proceso
+GET {{baseUrl}}/health
+X-Trace-Id: {{traceId}}
+
+### Estado de PostgreSQL
+GET {{baseUrl}}/ready
+X-Trace-Id: {{traceId}}
+
+### Catálogo
+GET {{baseUrl}}/api/products?page=1&pageSize=20
+X-Trace-Id: {{traceId}}
+
+### Detalle de producto
+GET {{baseUrl}}/api/products/{{productId}}
+X-Trace-Id: {{traceId}}
+
+### Checkout como cliente
+POST {{baseUrl}}/api/orders/checkout
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-User-Role: cliente
+X-Trace-Id: {{traceId}}
+
+{
+  "items": [
+    {
+      "productId": "{{productId}}",
+      "quantity": 1,
+      "expectedVersion": {{version}}
+    }
+  ]
+}
+
+### Pedidos del cliente
+GET {{baseUrl}}/api/orders
+X-User-Id: {{userId}}
+X-User-Role: cliente
+X-Trace-Id: {{traceId}}
+
+### Detalle de pedido
+GET {{baseUrl}}/api/orders/{{orderId}}
+X-User-Id: {{userId}}
+X-User-Role: cliente
+X-Trace-Id: {{traceId}}
+
+### Ajuste de stock como operador
+PATCH {{baseUrl}}/api/operator/products/{{productId}}/stock
+Content-Type: application/json
+X-User-Id: dev-operator-001
+X-User-Role: operador
+X-Trace-Id: {{traceId}}
+
+{
+  "onHand": 10,
+  "expectedVersion": {{version}}
+}
+
+### Webhook aprobado
+POST {{baseUrl}}/api/payments/webhook
+Content-Type: application/json
+X-Trace-Id: {{traceId}}
+
+{
+  "paymentId": "PAY-MANUAL-001",
+  "orderId": "{{orderId}}",
+  "status": "APPROVED",
+  "amount": 250000
+}
+
+### Repetir exactamente la solicitud anterior para validar idempotencia

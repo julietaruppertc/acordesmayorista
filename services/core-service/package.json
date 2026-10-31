@@ -12,6 +12,7 @@
     "seed": "node scripts/seed.js",
     "worker": "node src/workers/outboxWorker.js",
     "expire-reservations": "node src/jobs/expireReservations.js",
+    "demo:critical": "node scripts/demoCriticalFlows.js",
     "test": "vitest run --globals",
     "test:watch": "vitest --globals"
   },

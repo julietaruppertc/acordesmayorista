@@ -77,3 +77,19 @@ El checkout está permitido únicamente para `cliente`; la consulta de pedidos a
 **Decisión:** usar `node --watch` en lugar de `nodemon`.
 
 **Por qué:** la versión de Node acordada ya incorpora recarga automática y así se elimina una dependencia de desarrollo que presentaba una vulnerabilidad moderada indirecta.
+
+## DEC-MVP-11 — Contratos compartidos versionados
+
+**Decisión:** guardar ejemplos canónicos del Core en `shared/contracts/core` y usar `camelCase` en todos los cuerpos JSON.
+
+**Por qué:** Frontend y Gateway pueden trabajar contra los mismos formatos sin depender de explicaciones informales o capturas de pantalla.
+
+**A considerar:** si cambia un campo, ruta, rol, estado o código de error, debe actualizarse el contrato y avisarse antes de integrar.
+
+## DEC-MVP-12 — Pruebas y demostración reproducibles
+
+**Decisión:** mantener pruebas automáticas contra PostgreSQL y un comando `npm run demo:critical` para los escenarios visibles de la defensa.
+
+**Por qué:** permite repetir concurrencia e idempotencia sin depender de clics manuales o del estado del frontend.
+
+**A considerar:** la demo requiere API y PostgreSQL activos y al menos un producto con stock disponible.

@@ -44,14 +44,22 @@ async function poll() {
   }
 }
 
-const timer = setInterval(poll, env.OUTBOX_POLL_INTERVAL_SECONDS * 1000);
-poll();
+function startWorker() {
+  const timer = setInterval(poll, env.OUTBOX_POLL_INTERVAL_SECONDS * 1000);
+  poll();
 
-async function shutdown() {
-  clearInterval(timer);
-  await pool.end();
-  process.exit(0);
+  async function shutdown() {
+    clearInterval(timer);
+    await pool.end();
+    process.exit(0);
+  }
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+if (require.main === module) {
+  startWorker();
+}
+
+module.exports = { processOne, poll, startWorker };
