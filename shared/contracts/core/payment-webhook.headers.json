@@ -1,0 +1,5 @@
+{
+  "Content-Type": "application/json",
+  "X-Trace-Id": "trace-example-001",
+  "X-Webhook-Signature": "sha256=<64-caracteres-hexadecimales>"
+}

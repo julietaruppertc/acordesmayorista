@@ -4,6 +4,7 @@ const app = require('../src/app');
 const { pool } = require('../src/config/database');
 const { expireBatch } = require('../src/jobs/expireReservations');
 const { processOne } = require('../src/workers/outboxWorker');
+const { signPayload } = require('../src/modules/payments/webhookSignature');
 
 const suffix = crypto.randomUUID();
 const productIds = [];
@@ -76,12 +77,16 @@ describe.sequential('Reglas adicionales del Core', () => {
     expect(order.status).toBe(201);
     const orderId = order.body.data.id;
 
-    const response = await request(app).post('/api/payments/webhook').send({
+    const webhook = {
       paymentId: `REJECTED-${suffix}`,
       orderId,
       status: 'REJECTED',
       amount: 1000
-    });
+    };
+    const response = await request(app)
+      .post('/api/payments/webhook')
+      .set('X-Webhook-Signature', signPayload(webhook))
+      .send(webhook);
     expect(response.status).toBe(200);
     expect(response.body.data.orderStatus).toBe('PAYMENT_FAILED');
 
@@ -126,12 +131,16 @@ describe.sequential('Reglas adicionales del Core', () => {
       [orderId]
     );
 
-    const response = await request(app).post('/api/payments/webhook').send({
+    const webhook = {
       paymentId: `LATE-${suffix}`,
       orderId,
       status: 'APPROVED',
       amount: 1000
-    });
+    };
+    const response = await request(app)
+      .post('/api/payments/webhook')
+      .set('X-Webhook-Signature', signPayload(webhook))
+      .send(webhook);
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual({ status: 'ignored', reason: 'order_expired' });
 
@@ -165,6 +174,23 @@ describe.sequential('Reglas adicionales del Core', () => {
       .set(headers(`operator-${suffix}`, 'operador'))
       .send({ items: [{ productId, quantity: 1, expectedVersion: 2 }] })
       .expect(403);
+  });
+
+  it('rechaza webhooks sin firma antes de procesar sus datos', async () => {
+    const response = await request(app).post('/api/payments/webhook').send({
+      paymentId: `UNSIGNED-${suffix}`,
+      orderId: crypto.randomUUID(),
+      status: 'APPROVED',
+      amount: 1000
+    });
+    expect(response.status).toBe(401);
+    expect(response.body.error).toBe('WEBHOOK_SIGNATURE_REQUIRED');
+
+    const inbox = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM payments.webhook_inbox WHERE payment_id = $1`,
+      [`UNSIGNED-${suffix}`]
+    );
+    expect(inbox.rows[0].total).toBe(0);
   });
 
   it('revierte todas las reservas si falla un producto del checkout', async () => {

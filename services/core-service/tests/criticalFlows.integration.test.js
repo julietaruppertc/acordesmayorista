@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const request = require('supertest');
 const app = require('../src/app');
 const { pool } = require('../src/config/database');
+const { signPayload } = require('../src/modules/payments/webhookSignature');
 
 const suffix = crypto.randomUUID();
 let categoryId;
@@ -90,8 +91,17 @@ describe('Flujos críticos con PostgreSQL', () => {
       amount: 1000
     };
 
-    const first = await request(app).post('/api/payments/webhook').send(webhook).expect(200);
-    const duplicate = await request(app).post('/api/payments/webhook').send(webhook).expect(200);
+    const signature = signPayload(webhook);
+    const first = await request(app)
+      .post('/api/payments/webhook')
+      .set('X-Webhook-Signature', signature)
+      .send(webhook)
+      .expect(200);
+    const duplicate = await request(app)
+      .post('/api/payments/webhook')
+      .set('X-Webhook-Signature', signature)
+      .send(webhook)
+      .expect(200);
 
     expect(first.body.data).toEqual({ status: 'processed', orderStatus: 'PAID' });
     expect(duplicate.body.data).toEqual({ status: 'ignored', reason: 'already_processed' });

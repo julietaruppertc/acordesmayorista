@@ -15,6 +15,7 @@ const schema = z.object({
   RESERVATION_JOB_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
   OUTBOX_POLL_INTERVAL_SECONDS: z.coerce.number().int().positive().default(5),
   OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  PAYMENT_WEBHOOK_SECRET: z.string().min(32),
   TRUST_GATEWAY_HEADERS: z
     .string()
     .default('true')
@@ -25,6 +26,13 @@ const parsed = schema.safeParse(process.env);
 
 if (!parsed.success) {
   throw new Error(`Configuración inválida: ${parsed.error.message}`);
+}
+
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  parsed.data.PAYMENT_WEBHOOK_SECRET === 'change-this-local-demo-secret-32-chars'
+) {
+  throw new Error('PAYMENT_WEBHOOK_SECRET debe cambiarse antes de ejecutar en producción.');
 }
 
 module.exports = parsed.data;

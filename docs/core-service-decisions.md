@@ -93,3 +93,27 @@ El checkout está permitido únicamente para `cliente`; la consulta de pedidos a
 **Por qué:** permite repetir concurrencia e idempotencia sin depender de clics manuales o del estado del frontend.
 
 **A considerar:** la demo requiere API y PostgreSQL activos y al menos un producto con stock disponible.
+
+## DEC-MVP-13 — PostgreSQL cloud mediante Supabase
+
+**Decisión:** utilizar Supabase como alojamiento cloud de la base relacional del Core, conservando PostgreSQL estándar y las migraciones existentes.
+
+**Por qué:** el TP exige una base relacional para instrumentos y pedidos y una infraestructura cloud. Supabase satisface ambas condiciones sin modificar la lógica del Core, que se conecta mediante `DATABASE_URL`.
+
+**A considerar:** Supabase no estaba impuesto por el TP; es una decisión de implementación del MVP. La cadena real se guarda solamente en `.env` o en los secretos de la plataforma cloud. `.env.example` conserva un valor ficticio.
+
+## DEC-MVP-14 — Acceso a datos únicamente mediante Core
+
+**Decisión:** habilitar Row Level Security en todas las tablas y revocar privilegios a `PUBLIC`, `anon` y `authenticated`, sin crear políticas públicas.
+
+**Por qué:** el TP establece control por roles, Gateway como entrada y propiedad exclusiva de datos por servicio. El navegador no debe utilizar las APIs de tablas de Supabase; toda operación pasa por Gateway y Core.
+
+**A considerar:** el Core utiliza la conexión PostgreSQL privada del servidor. RLS complementa, pero no reemplaza, la validación JWT del Gateway ni la autorización del Core.
+
+## DEC-MVP-15 — Autenticidad de webhooks mediante HMAC
+
+**Decisión:** exigir `X-Webhook-Signature` con una firma HMAC-SHA256 calculada sobre el cuerpo JSON exacto usando `PAYMENT_WEBHOOK_SECRET`.
+
+**Por qué:** el TP define que el Servicio de Pagos debe validar el origen del webhook, además de controlar duplicados. La comparación se realiza en tiempo constante antes de validar o almacenar el evento.
+
+**A considerar:** el secreto existe solo en el proveedor simulado, Gateway/Core y variables privadas. Nunca debe incluirse en Frontend, contratos JSON o GitHub. El Gateway debe propagar el encabezado sin modificar el cuerpo.

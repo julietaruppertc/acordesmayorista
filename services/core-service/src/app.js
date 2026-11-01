@@ -12,7 +12,14 @@ const app = express();
 
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(express.json({ limit: '256kb' }));
+app.use(
+  express.json({
+    limit: '256kb',
+    verify: (req, _res, buffer) => {
+      req.rawBody = Buffer.from(buffer);
+    }
+  })
+);
 app.use(requestContext);
 
 app.get('/health', (req, res) => {

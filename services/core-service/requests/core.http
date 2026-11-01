@@ -4,6 +4,7 @@
 @productId = REEMPLAZAR_CON_UUID_DEL_CATALOGO
 @orderId = REEMPLAZAR_CON_UUID_DEL_CHECKOUT
 @version = 1
+@webhookSignature = REEMPLAZAR_CON_FIRMA_SHA256
 
 ### Estado del proceso
 GET {{baseUrl}}/health
@@ -66,6 +67,7 @@ X-Trace-Id: {{traceId}}
 POST {{baseUrl}}/api/payments/webhook
 Content-Type: application/json
 X-Trace-Id: {{traceId}}
+X-Webhook-Signature: {{webhookSignature}}
 
 {
   "paymentId": "PAY-MANUAL-001",

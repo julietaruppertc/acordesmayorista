@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { createSignature } = require('../src/modules/payments/webhookSignature');
 
 const baseUrl = process.env.DEMO_API_URL || 'http://localhost:4002';
 const userId = process.env.DEMO_USER_ID || 'demo-concurrency-user';
@@ -54,12 +55,17 @@ async function main() {
     status: 'APPROVED',
     amount: successes[0].body.data.total
   });
+  const webhookHeaders = {
+    'Content-Type': 'application/json',
+    'X-Trace-Id': traceId,
+    'X-Webhook-Signature': createSignature(webhookBody)
+  };
 
   const webhooks = await Promise.all(
     Array.from({ length: 5 }, () =>
       jsonRequest('/api/payments/webhook', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Trace-Id': traceId },
+        headers: webhookHeaders,
         body: webhookBody
       })
     )

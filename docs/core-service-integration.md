@@ -21,6 +21,7 @@ RESERVATION_TTL_MINUTES=5
 RESERVATION_JOB_INTERVAL_SECONDS=30
 OUTBOX_POLL_INTERVAL_SECONDS=5
 OUTBOX_MAX_ATTEMPTS=3
+PAYMENT_WEBHOOK_SECRET=secreto-privado-de-al-menos-32-caracteres
 NODE_ENV=production
 ```
 
@@ -46,6 +47,8 @@ Los roles se mantienen en español: `cliente`, `operador`, `admin`.
 
 El Core repite la autorización de negocio. No debe exponerse directamente a Internet. API, worker y proceso de expiración usan la misma imagen Docker con comandos diferentes.
 
+El Gateway debe conservar `X-Webhook-Signature` y reenviar el cuerpo JSON sin transformarlo, porque la firma se calcula sobre sus bytes exactos.
+
 Antes de iniciar la API en un ambiente nuevo:
 
 ```bash
@@ -66,6 +69,7 @@ El frontend consume siempre el Gateway. Los ejemplos canónicos están en `share
 5. Conservar el `orderId` devuelto por checkout.
 6. Para demostrar idempotencia, repetir el webhook con el mismo `paymentId`.
 7. Para representar un pago diferente, generar otro `paymentId`.
+8. El Frontend no debe conocer ni calcular `X-Webhook-Signature`. Para la demo se utiliza `npm run demo:critical` o un simulador backend que firme la notificación.
 
 Estados visibles del pedido:
 
@@ -86,6 +90,20 @@ El contrato ya coincide con Auth:
 
 El Core no consulta MongoDB, no valida contraseñas y no utiliza la clave privada. La validación JWT pertenece al Gateway.
 
+## PostgreSQL en Supabase
+
+Supabase se usa como PostgreSQL cloud, no como acceso directo desde el navegador. Para preparar un proyecto:
+
+1. Crear el proyecto en Supabase.
+2. Copiar la cadena PostgreSQL desde la sección de conexión.
+3. Guardarla como `DATABASE_URL` en `services/core-service/.env` y luego en los secretos del despliegue.
+4. Definir un `PAYMENT_WEBHOOK_SECRET` distinto del valor de ejemplo.
+5. Ejecutar `npm run migrate` contra la base cloud.
+6. Ejecutar `npm run seed` solamente si se necesitan datos de demostración.
+7. Ejecutar `npm test` y comprobar `/ready`.
+
+Las migraciones activan RLS y bloquean `PUBLIC`, `anon` y `authenticated`. No deben crearse políticas de acceso directo para Frontend, porque esto rompería la propiedad de datos definida para el Core.
+
 ## Respuestas de error
 
 ```json
@@ -101,6 +119,7 @@ El Core no consulta MongoDB, no valida contraseñas y no utiliza la clave privad
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | DTO inválido |
 | 401 | `IDENTITY_REQUIRED` | faltan encabezados de identidad |
+| 401 | `WEBHOOK_SIGNATURE_REQUIRED` / `INVALID_WEBHOOK_SIGNATURE` | webhook sin origen verificable |
 | 403 | `FORBIDDEN` | rol o propietario incorrecto |
 | 404 | `PRODUCT_NOT_FOUND` / `ORDER_NOT_FOUND` | recurso inexistente |
 | 409 | `STOCK_VERSION_CONFLICT` | versión desactualizada |
@@ -138,3 +157,4 @@ Resultado esperado:
 - El TTL reducido es para demostración.
 - Los eventos no usan Kafka o RabbitMQ; se implementa Transactional Outbox.
 - Los encabezados de identidad solo son confiables cuando el Core permanece detrás del Gateway en la red privada.
+- El valor de ejemplo de `PAYMENT_WEBHOOK_SECRET` está prohibido cuando `NODE_ENV=production`.
