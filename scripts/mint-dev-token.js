@@ -26,6 +26,7 @@ const payload = {
   sub: 'usr_dev_' + crypto.randomBytes(4).toString('hex'),
   email: `${role}@acordes.com`,
   rol: role,
+  iss: 'acordes-auth-service',
   cuit: role === 'cliente' ? '20381234564' : null,
   estado_mayorista: role === 'cliente' ? 'APROBADO' : 'NO_APLICA',
   iat: Math.floor(Date.now() / 1000),

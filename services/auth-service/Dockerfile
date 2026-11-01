@@ -1,11 +1,12 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
-WORKDIR /app
+WORKDIR /app/services/auth-service
 
-COPY package*.json ./
-RUN npm install --production
+COPY services/auth-service/package*.json ./
+RUN npm ci --omit=dev
 
-COPY . .
+COPY services/auth-service/src ./src
+COPY shared/keys/public.pem /app/shared/keys/public.pem
 
 EXPOSE 4001
 

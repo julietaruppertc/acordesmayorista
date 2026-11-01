@@ -71,7 +71,8 @@ acordesmayorista/
 │   └── web/                                 # Frontend SPA (React 18 + Vite + Tailwind CSS)
 ├── docs/
 │   ├── auth-service-handoff.md              # Contratos, variables y criptografía de Auth
-│   ├── core-service-decisions.md            # Registro formal de decisiones técnicas (DEC-MVP-01 a 12)
+│   ├── api-gateway-integration.md           # Rutas, seguridad y trazabilidad del Gateway
+│   ├── core-service-decisions.md            # Registro formal de decisiones técnicas (DEC-MVP-01 a 15)
 │   └── core-service-integration.md          # Especificación de integración, variables y puertos del Core
 ├── scripts/
 │   └── mint-dev-token.js                    # Generador offline de tokens JWT (RS256) para desarrollo
@@ -84,7 +85,7 @@ acordesmayorista/
 │   │   └── core/                            # DTOs y contratos JSON canónicos para el dominio
 │   └── keys/
 │       └── public.pem                       # Clave pública RSA distribuida para validación de firma
-├── .env.example                             # Plantilla unificada de variables de entorno
+├── services/*/.env.example                  # Plantillas de variables de entorno por servicio
 └── docker-compose.yml                       # Orquestación de infraestructura y servicios locales
 ```
 
@@ -104,8 +105,8 @@ acordesmayorista/
 ## 5. Puesta en Marcha en Entorno Local
 
 ### Prerrequisitos
-* Node.js v18 LTS o superior
-* Docker y Docker Compose instalados
+* Node.js v24 o superior
+* Docker y Docker Compose para ejecutar contenedores
 * Instancia accesible de MongoDB Atlas y PostgreSQL (local o cloud)
 
 ### Paso 1: Configuración de variables de entorno
@@ -118,6 +119,9 @@ cp services/auth-service/.env.example services/auth-service/.env
 
 # Servicio Core
 cp services/core-service/.env.example services/core-service/.env
+
+# API Gateway (opcional: también funciona con los valores por defecto)
+cp services/api-gateway/.env.example services/api-gateway/.env
 ```
 
 Asegurar que la clave privada RSA de desarrollo resida en `shared/keys/private.pem` (distribuida por canal seguro, excluida de Git).
@@ -127,16 +131,21 @@ Asegurar que la clave privada RSA de desarrollo resida en `shared/keys/private.p
 ```bash
 # 1. Dependencias y arranque de Auth Service
 cd services/auth-service
-npm install
+npm ci
 npm run dev
 
-# 2. Migraciones, datos semilla y arranque del Core Service
-cd ../core-service
-npm install
-npm run migrate
-npm run seed
+# 2. Arranque del Core Service en otra terminal, desde la raíz del repositorio
+cd services/core-service
+npm ci
+npm run dev
+
+# 3. Arranque del Gateway en una tercera terminal, desde la raíz del repositorio
+cd services/api-gateway
+npm ci
 npm run dev
 ```
+
+`npm run migrate` y `npm run seed` modifican PostgreSQL. Ejecutarlos solamente sobre una base de desarrollo aislada cuando corresponda; `seed` carga datos de demostración. Para las pruebas locales sin base, consultar [`docs/api-gateway-integration.md`](docs/api-gateway-integration.md).
 
 ### Paso 3: Generación de Tokens de Desarrollo (Trabajo Desacoplado)
 
@@ -179,6 +188,8 @@ npm run worker
 
 Para consultar diagramas, especificaciones DTO, contratos JSON y actas de decisiones, remitirse a la carpeta `docs/`:
 * [`docs/auth-service-handoff.md`](docs/auth-service-handoff.md): Especificación técnica del servicio de identidad y emisión de JWT.
+* [`docs/auth-security-step-0.md`](docs/auth-security-step-0.md): Cambios de seguridad del registro y la aprobación mayorista, con pruebas y pendientes de integración.
+* [`docs/api-gateway-integration.md`](docs/api-gateway-integration.md): Rutas, permisos, trazabilidad, variables y pruebas del Gateway.
 * [`docs/core-service-integration.md`](docs/core-service-integration.md): Contratos de checkout, webhook de pagos y propagación de headers.
 * [`docs/core-service-decisions.md`](docs/core-service-decisions.md): Decisiones arquitectónicas formales de persistencia, reservas y outbox.
 * [`shared/contracts/core/`](shared/contracts/core/): Schemas JSON canónicos de request y response.

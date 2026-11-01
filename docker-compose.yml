@@ -1,0 +1,40 @@
+name: acordes-mayorista
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    env_file: services/auth-service/.env
+    volumes:
+      - type: bind
+        source: ./shared/keys/private.pem
+        target: /app/shared/keys/private.pem
+        read_only: true
+    networks: [backend]
+
+  core-service:
+    build:
+      context: ./services/core-service
+    env_file: services/core-service/.env
+    networks: [backend]
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    environment:
+      GATEWAY_PORT: 4000
+      AUTH_SERVICE_URL: http://auth-service:4001
+      CORE_SERVICE_URL: http://core-service:4002
+      CORS_ORIGIN: http://localhost:3000
+      PUBLIC_KEY_PATH: /app/shared/keys/public.pem
+    ports:
+      - "4000:4000"
+    depends_on:
+      - auth-service
+      - core-service
+    networks: [backend]
+
+networks:
+  backend:

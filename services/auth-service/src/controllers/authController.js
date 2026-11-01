@@ -21,7 +21,7 @@ try {
 // 1. Registro de usuarios (RF-10 / US-01)
 exports.register = async (req, res) => {
   try {
-    const { email, password, cuit, rol } = req.body;
+    const { email, password, cuit } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
@@ -40,7 +40,7 @@ exports.register = async (req, res) => {
     const user = new User({
       email,
       password: hashedPassword,
-      rol: rol || 'cliente',
+      rol: 'cliente',
       cuit: cuit || null,
       estado_mayorista: estadoMayorista
     });

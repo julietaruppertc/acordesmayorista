@@ -74,12 +74,11 @@ La arquitectura no comparte secretos simétricos entre servicios ni realiza cons
 {
   "email": "mayorista@acordes.com",
   "password": "Password123!",
-  "cuit": "20381234564",
-  "rol": "cliente"
+  "cuit": "20381234564"
 }
 ```
 
-*Nota: La presencia de `cuit` asigna automáticamente `estado_mayorista: "PENDIENTE"`. En su ausencia, el estado asignado es `"NO_APLICA"`.*
+*Nota: El registro público siempre crea usuarios con `rol: "cliente"`, incluso si el solicitante envía otro rol. La presencia de `cuit` asigna automáticamente `estado_mayorista: "PENDIENTE"`. En su ausencia, el estado asignado es `"NO_APLICA"`. Las cuentas `admin` y `operador` se crean mediante el procedimiento administrado por el equipo en MongoDB.*
 
 ### Contrato de login (`POST /auth/login`)
 
@@ -115,6 +114,8 @@ Respuesta exitosa (`200 OK`):
 
 Valores válidos para `estado`: `"APROBADO"` o `"RECHAZADO"`.
 
+Auth exige `Authorization: Bearer <token>` en esta ruta. Verifica la firma RS256, el emisor `acordes-auth-service`, la vigencia y el rol `admin` sin confiar en `X-User-Role`. Responde `401` si falta el token o es inválido, y `403` si el usuario autenticado no es administrador.
+
 ## Para Gateway y despliegue
 
 1. **Ruteo inverso:** Desviar todo prefijo `/auth/*` hacia `http://auth-service:4001/auth/*`.
@@ -127,6 +128,8 @@ X-User-Role: claim rol
 X-User-Wholesale-Status: claim estado_mayorista
 X-Trace-Id: identificador generado o propagado
 ```
+
+4. **Aprobación mayorista:** En `PATCH /auth/users/:id/approve-wholesale`, conservar `Authorization: Bearer <token>` al reenviar la petición. Auth verifica el token de forma independiente.
 
 ## Para Servicio Core
 
@@ -163,9 +166,15 @@ node scripts/mint-dev-token.js admin
 | :--- | :--- |
 | `400` | Campos obligatorios ausentes o formato de ObjectId inválido |
 | `401` | Credenciales incorrectas o usuario inexistente |
+| `401` | Falta el token (`TOKEN_REQUIRED`) o el token de aprobación es inválido (`INVALID_TOKEN`) |
+| `403` | El token de aprobación es válido, pero el rol no es `admin` (`FORBIDDEN`) |
 | `404` | Usuario no encontrado al intentar actualizar estado mayorista |
 | `409` | Conflicto por email duplicado en base de datos |
 | `500` | Falla interna de conexión con el cluster MongoDB Atlas |
+
+## Pruebas locales
+
+Desde `services/auth-service`, ejecutar `npm test`. Las pruebas de seguridad usan un par RSA generado durante la ejecución y simulan la persistencia de usuarios; no necesitan conexión a MongoDB ni la clave privada de desarrollo.
 
 ## Límites conocidos del MVP
 

@@ -1,0 +1,8 @@
+.git
+**/node_modules
+**/.env
+**/.env.local
+**/.env.*.local
+shared/keys/private.pem
+**/*.key
+**/*private*.env
