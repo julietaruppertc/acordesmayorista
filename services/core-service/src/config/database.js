@@ -3,7 +3,9 @@ const env = require('./env');
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: env.NODE_ENV === 'production' || env.DATABASE_SSL
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 pool.on('error', (error) => {

@@ -16,12 +16,13 @@ Variables obligatorias en nube:
 
 ```env
 CORE_PORT=4002
-DATABASE_URL=postgresql://usuario:password@host:5432/acordes_core
+DATABASE_URL=<postgresql-connection-string>
+DATABASE_SSL=false
 RESERVATION_TTL_MINUTES=5
 RESERVATION_JOB_INTERVAL_SECONDS=30
 OUTBOX_POLL_INTERVAL_SECONDS=5
 OUTBOX_MAX_ATTEMPTS=3
-PAYMENT_WEBHOOK_SECRET=secreto-privado-de-al-menos-32-caracteres
+PAYMENT_WEBHOOK_SECRET=<private-random-value-min-32-chars>
 NODE_ENV=production
 ```
 
@@ -94,13 +95,21 @@ El Core no consulta MongoDB, no valida contraseñas y no utiliza la clave privad
 
 Supabase se usa como PostgreSQL cloud, no como acceso directo desde el navegador. Para preparar un proyecto:
 
+- Proyecto: `acordes-mayorista`.
+- Referencia pública: `kjqjzamulpfsvhrpptyc`.
+- Región: South America (São Paulo), `sa-east-1`.
+- Conexión del Core: Session Pooler con SSL (`DATABASE_SSL=true`).
+- Data API habilitada, exposición automática de tablas deshabilitada y RLS automático habilitado.
+- La integración directa con GitHub queda pendiente de autorización del propietario del repositorio y no es necesaria para ejecutar el Core.
+
 1. Crear el proyecto en Supabase.
 2. Copiar la cadena PostgreSQL desde la sección de conexión.
 3. Guardarla como `DATABASE_URL` en `services/core-service/.env` y luego en los secretos del despliegue.
-4. Definir un `PAYMENT_WEBHOOK_SECRET` distinto del valor de ejemplo.
-5. Ejecutar `npm run migrate` contra la base cloud.
-6. Ejecutar `npm run seed` solamente si se necesitan datos de demostración.
-7. Ejecutar `npm test` y comprobar `/ready`.
+4. Definir `DATABASE_SSL=true` para Supabase.
+5. Definir un `PAYMENT_WEBHOOK_SECRET` privado de al menos 32 caracteres.
+6. Ejecutar `npm run migrate` contra la base cloud.
+7. Ejecutar `npm run seed` solamente si se necesitan datos de demostración.
+8. Ejecutar `npm test` y comprobar `/ready`.
 
 Las migraciones activan RLS y bloquean `PUBLIC`, `anon` y `authenticated`. No deben crearse políticas de acceso directo para Frontend, porque esto rompería la propiedad de datos definida para el Core.
 

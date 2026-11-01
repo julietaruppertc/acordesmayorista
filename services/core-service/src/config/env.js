@@ -11,6 +11,10 @@ const schema = z.object({
     .string()
     .min(1)
     .default('postgresql://postgres:postgres@localhost:5432/acordes_core'),
+  DATABASE_SSL: z
+    .string()
+    .default('false')
+    .transform((value) => value.toLowerCase() === 'true'),
   RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(5),
   RESERVATION_JOB_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
   OUTBOX_POLL_INTERVAL_SECONDS: z.coerce.number().int().positive().default(5),
@@ -30,7 +34,10 @@ if (!parsed.success) {
 
 if (
   parsed.data.NODE_ENV === 'production' &&
-  parsed.data.PAYMENT_WEBHOOK_SECRET === 'change-this-local-demo-secret-32-chars'
+  [
+    'change-this-local-demo-secret-32-chars',
+    '<private-random-value-min-32-chars>',
+  ].includes(parsed.data.PAYMENT_WEBHOOK_SECRET)
 ) {
   throw new Error('PAYMENT_WEBHOOK_SECRET debe cambiarse antes de ejecutar en producción.');
 }
