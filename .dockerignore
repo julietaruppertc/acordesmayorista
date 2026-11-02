@@ -6,3 +6,7 @@
 shared/keys/private.pem
 **/*.key
 **/*private*.env
+
+# Configuracion privada trasladada
+services/auth-service/env
+**/*privado.env

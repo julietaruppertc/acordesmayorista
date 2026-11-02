@@ -193,3 +193,7 @@ Para consultar diagramas, especificaciones DTO, contratos JSON y actas de decisi
 * [`docs/core-service-integration.md`](docs/core-service-integration.md): Contratos de checkout, webhook de pagos y propagación de headers.
 * [`docs/core-service-decisions.md`](docs/core-service-decisions.md): Decisiones arquitectónicas formales de persistencia, reservas y outbox.
 * [`shared/contracts/core/`](shared/contracts/core/): Schemas JSON canónicos de request y response.
+
+## Integración local del Frontend
+
+Para iniciar el backend con bases locales aisladas, conectar la SPA y conocer los contratos y pendientes, consultar [la guía de Frontend](docs/frontend-handoff.md). El despliegue cloud todavía está pendiente. Las pruebas y la demostración de DEC-09 están en [Docker temporal](docs/docker-temporary-test.md) y [balanceo](docs/gateway-balance-demo.md).

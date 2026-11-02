@@ -1,0 +1,118 @@
+name: acordes-prueba
+
+x-core-env: &core-env
+  NODE_ENV: test
+  CORE_PORT: 4002
+  DATABASE_URL: postgresql://acordes_test:local_test_only@postgres:5432/acordes_test
+  DATABASE_SSL: "false"
+  PAYMENT_WEBHOOK_SECRET: local-isolated-test-secret-not-for-production
+  RESERVATION_TTL_MINUTES: 5
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: acordes_test
+      POSTGRES_PASSWORD: local_test_only
+      POSTGRES_DB: acordes_test
+    volumes:
+      - postgres-test:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U acordes_test -d acordes_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks: [test-backend]
+
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-test:/data/db
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    networks: [test-backend]
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      NODE_ENV: test
+      PORT: 4001
+      MONGO_URI: mongodb://mongo:27017/acordes_auth_test
+      JWT_EXPIRES_IN: 1h
+    volumes:
+      - type: bind
+        source: ./shared/keys/private.pem
+        target: /app/shared/keys/private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [test-backend]
+
+  core-service:
+    build:
+      context: ./services/core-service
+    environment: *core-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
+  core-replica:
+    profiles: [balance]
+    image: acordes-prueba-core-service
+    environment: *core-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    environment:
+      NODE_ENV: test
+      GATEWAY_PORT: 4000
+      AUTH_SERVICE_URL: http://auth-service:4001
+      CORE_SERVICE_URL: http://core-service:4002
+      CORS_ORIGIN: http://localhost:3000
+      PUBLIC_KEY_PATH: /app/shared/keys/public.pem
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      - auth-service
+      - core-service
+    networks: [test-backend, test-entry]
+
+  core-tests:
+    profiles: [checks]
+    build:
+      context: ./services/core-service
+      dockerfile: Dockerfile.test
+    volumes:
+      - type: bind
+        source: ./services/core-service/tests
+        target: /app/tests
+        read_only: true
+    environment: *core-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
+networks:
+  test-entry:
+  test-backend:
+    internal: true
+
+volumes:
+  postgres-test:
+  mongo-test:

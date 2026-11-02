@@ -9,7 +9,7 @@ const routePolicy = require('./routePolicy');
 const validRoles = new Set(['cliente', 'operador', 'admin']);
 const validWholesaleStatuses = new Set(['NO_APLICA', 'PENDIENTE', 'APROBADO', 'RECHAZADO']);
 
-function createApp({ authUrl, coreUrl, publicKey, corsOrigin }) {
+function createApp({ authUrl, coreUrl, corePool, onCoreSelected, publicKey, corsOrigin }) {
   const app = express();
   app.disable('x-powered-by');
   app.use(helmet());
@@ -36,13 +36,14 @@ function createApp({ authUrl, coreUrl, publicKey, corsOrigin }) {
     exposedHeaders: ['X-Trace-Id']
   }));
 
-  const proxyOptions = (target) => ({
+  const proxyOptions = (target, onUnavailable) => ({
     target,
     changeOrigin: true,
     proxyTimeout: 10000,
     timeout: 10000,
     on: {
       error(_error, _req, res) {
+        onUnavailable?.();
         if (res.headersSent) return res.end();
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'UPSTREAM_UNAVAILABLE' }));
@@ -50,7 +51,10 @@ function createApp({ authUrl, coreUrl, publicKey, corsOrigin }) {
     }
   });
   const authProxy = createProxyMiddleware(proxyOptions(authUrl));
-  const coreProxy = createProxyMiddleware(proxyOptions(coreUrl));
+  const coreProxy = corePool ? null : createProxyMiddleware(proxyOptions(coreUrl));
+  const coreProxies = new Map(corePool ? corePool.targets.map(target => [
+    target, createProxyMiddleware(proxyOptions(target, () => corePool.markUnavailable(target)))
+  ]) : []);
 
   app.use((req, res, next) => {
     const policy = routePolicy(req.method, req.path);
@@ -94,7 +98,12 @@ function createApp({ authUrl, coreUrl, publicKey, corsOrigin }) {
         req.headers['x-user-role'] = payload.rol;
         req.headers['x-user-wholesale-status'] = payload.estado_mayorista;
       }
-      return coreProxy(req, res, next);
+      if (!corePool) return coreProxy(req, res, next);
+      const target = corePool.next();
+      if (!target) return res.status(502).json({ error: 'UPSTREAM_UNAVAILABLE', traceId: req.traceId });
+      onCoreSelected?.(target, req.traceId);
+      // One attempt only, including checkout and webhook. Never replay a request.
+      return coreProxies.get(target)(req, res, next);
     }
 
     if (policy.access === 'public') {

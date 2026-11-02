@@ -67,3 +67,7 @@ Las pruebas de concurrencia, idempotencia y Outbox del Core sí insertan y borra
 Estas comprobaciones fueron de solo lectura. No se ejecutaron migraciones, semillas, checkout, webhooks ni pruebas de integración que escriban en las bases compartidas. Los tres procesos se detuvieron al terminar. En este equipo, Node intentó resolver el registro SRV de MongoDB mediante un DNS local que rechazó la consulta; para la comprobación de Auth se utilizó temporalmente un servidor DNS alternativo solo en ese proceso, sin modificar código ni `.env`.
 
 La configuración de Docker Compose está preparada, pero no se ejecutó porque Docker no está disponible en este equipo. La validación de concurrencia, idempotencia y Outbox queda pendiente de una base PostgreSQL aislada para pruebas.
+
+## DEC-09 — Balanceo opcional del Core
+
+CORE_SERVICE_URLS habilita round-robin entre URLs internas de Core separadas por comas. Sin esa variable se conserva CORE_SERVICE_URL. La salud se sondea por /ready (incluye comprobación de PostgreSQL), con intervalo/timeout configurables; una réplica se excluye si falla y se readmite al recuperarse. Si no hay destinos, HTTP 502 UPSTREAM_UNAVAILABLE. No se reintentan automáticamente solicitudes de ningún método. JWT, permisos, traza y bytes del webhook conservan su comportamiento. Ver docs/gateway-balance-demo.md para decisiones, variables, límites y evidencia local; no representa validación de 250 usuarios ni despliegue cloud.

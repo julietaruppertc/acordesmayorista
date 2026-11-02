@@ -144,3 +144,43 @@ Las cinco rutas deben aparecer. No ejecutar la suite completa de Core ni migrate
 Diego rechazó una solicitud del firewall de Windows para acceso desde redes públicas/privadas. No se confirmó el nombre de la aplicación. No se agregaron excepciones al firewall. Las comprobaciones localhost respondieron correctamente; los procesos temporales fueron detenidos y no se encontraron listeners en los puertos 4000, 4001 y 4002 al cerrar la verificación.
 
 Para próximas ejecuciones manuales, preparar el arranque limitado a 127.0.0.1, conservando la conectividad necesaria en Docker. Los entrypoints actuales no fijan host explícito. Es un cambio propuesto, no realizado. Las pruebas del Gateway ya escuchan explícitamente en 127.0.0.1.
+
+## Inicio de preparación cloud — 2026-11-01
+
+Diego eligió comenzar la preparación para Railway manteniendo Atlas y Supabase. Todavía no tiene cuenta/proyecto. Ver docs/railway-deployment.md para topología, configuración por servicio, secretos y comprobaciones. No se crearon recursos ni se desplegó código. Quedan por aprobar adaptaciones de clave privada de Auth, prevención de escrituras durante la primera fase y exclusión de archivos privados del contexto Docker. Worker y expiración deben seguir detenidos sobre la base compartida. Este avance es documental; no acredita todavía despliegue, red privada operativa ni balanceo.
+
+## Preparación de prueba Docker temporal — 2026-11-01
+
+Diego autorizó probar localmente y apagar al terminar. Se agregó docker-compose.test.yml como variante independiente con PostgreSQL y MongoDB locales, red internal sin salida externa, sin cargar .env compartidos y único puerto publicado 127.0.0.1:4000. Se agregó Dockerfile.test al Core y montaje de tests de solo lectura, y se excluyeron archivos privados trasladados del contexto Docker. Guía: docs/docker-temporary-test.md.
+
+Docker Desktop 4.97.0 instalado; CLI Docker 29.9.2. docker compose -f docker-compose.test.yml config --quiet pasó. No se construyeron imágenes ni iniciaron contenedores. WSL estaba ausente; su instalación requiere administrador de Windows (el intento sin elevación UAC falló). Se solicitó instalación con confirmación UAC. Resultado de pruebas integrales pendiente; no equivale a aprobación. No se encontraron listeners en puertos 4000, 4001 ni 4002 al comprobar. No se modificaron las bases compartidas, el código funcional ni el Compose principal. No se hicieron nuevos commits ni push.
+
+Actualización de requisitos: instalación oficial de WSL 2.7.14 completada mediante UAC (código 0). El comando elevado wsl --install --no-distribution terminó con código 0 para habilitar el soporte requerido. El intento de iniciar Docker Desktop no permitió obtener un motor operativo; se solicitó detener Desktop. No se iniciaron contenedores del proyecto. Se requiere reinicio manual de Windows y nueva comprobación del motor antes de ejecutar la prueba; no se reinició el equipo automáticamente.
+
+## Resultado tras reinicio: prueba Docker completada
+
+Se ejecutó y aprobó el entorno de docs/docker-temporary-test.md: construcciones de las cuatro imágenes, salud de ambas bases locales y 13 pruebas del Core aprobadas. scripts/docker-smoke.js verificó por Gateway registro, login real, JWT y permisos, checkout, HMAC, pago y cuatro duplicados, un solo pago/evento en SQL y Outbox procesado conservando traza. Trace: docker-smoke-97914ac5-7048-4a15-a449-56afcd1804e2.
+
+Corrección de red: solo Gateway se conecta a test-entry además de test-backend; Auth, Core, MongoDB y PostgreSQL permanecen solo en la red interna. Único puerto publicado: 127.0.0.1:4000. No se utilizaron las bases compartidas ni se alteraron sus .env. Contenedores retirados al terminar; datos ficticios conservados en volúmenes locales. Pendientes: cloud, balanceo, integración Frontend y validación de RNF. No se hicieron nuevos commits ni push.
+
+```mermaid
+flowchart TD
+    PC[Prueba temporal en esta PC] --> GW[Gateway: solo 127.0.0.1:4000]
+    GW -->|Red interna| A[Auth]
+    GW -->|Red interna| C[Core]
+    A --> M[(MongoDB local de prueba)]
+    C --> P[(PostgreSQL local de prueba)]
+    C --> W[Outbox: evento y traza verificados]
+    OK[13 pruebas Core y flujo por Gateway aprobados] --> OFF[Contenedores retirados al terminar]
+    OFF --> NEXT[Pendiente: cloud, balanceo y Frontend]
+```
+
+## DEC-09: demostración local de balanceo completada
+
+Se implementó el pool opcional CORE_SERVICE_URLS con round-robin, sondeo /ready y exclusión/recuperación de destinos. El modo CORE_SERVICE_URL existente se conserva. Sin destinos: 502 UPSTREAM_UNAVAILABLE; no se reintentan compras ni pagos. No cambian rutas, DTO, roles ni lógica de Auth/Core.
+
+Ver docs/gateway-balance-demo.md: Gateway 10 pruebas aprobadas, Docker con dos Core sobre el mismo PostgreSQL local, alternancia A/B, caída de A, recuperación y caída de ambas verificadas. También pasó la compra integrada, HMAC, duplicados y Outbox con el pool habilitado. Contenedores retirados al finalizar. No se acredita carga de 250 usuarios, separación física ni cloud. Balanceo del Core demostrado localmente; Auth continúa con un destino. Cambios sin commit/push.
+
+## Preparación de integración a main
+
+Diego autorizó explícitamente publicar este lote en main para que Camila pueda tomarlo. Esto reemplaza, para esta publicación concreta, la restricción previa de trabajar y publicar solo en trabajo/diego. Se agregó docs/frontend-handoff.md y se aclaró el estado no desplegado de Railway. No se incorporan credenciales ni archivos privados. La publicación requiere pruebas y revisión del contenido; cloud, Frontend real y RNF siguen pendientes.

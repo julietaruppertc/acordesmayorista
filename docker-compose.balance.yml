@@ -1,0 +1,8 @@
+# Use only with docker-compose.test.yml; never with the shared-database Compose.
+services:
+  api-gateway:
+    environment:
+      CORE_SERVICE_URLS: http://core-service:4002,http://core-replica:4002
+      CORE_HEALTH_INTERVAL_MS: 1000
+      CORE_HEALTH_TIMEOUT_MS: 500
+      CORE_BALANCE_LOG: "true"
