@@ -27,3 +27,7 @@ shared/keys/private.pem
 
 .env
 services/auth-service/.env
+
+# Configuracion privada trasladada desde otra PC
+/services/auth-service/env
+/services/core-service/acordes-mayorista-supabase-privado.env
