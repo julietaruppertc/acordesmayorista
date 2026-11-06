@@ -1,42 +1,44 @@
 
 function BrandLogo({ light = false, compact = false }) {
   const textColor = light ? "#FFFFFF" : "#183B4E";
-  const subtitleColor = light ? "#D8F5EF" : "#20B8A5";
+  const subtitleColor = light ? "#D8F5EF" : "#137B6C";
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-14 h-14 rounded-2xl bg-[#183B4E] flex items-center justify-center shrink-0">
-        <svg viewBox="0 0 64 64" className="w-12 h-12">
-          {/* Silueta de púa */}
+    <div className="flex items-center gap-3" aria-label="Acordes Mayorista">
+      <div className="w-14 h-14 rounded-[18px] bg-[#183B4E] flex items-center justify-center shrink-0 shadow-[0_7px_18px_rgba(24,59,78,0.18)] ring-1 ring-white/10">
+        <svg
+          viewBox="0 0 64 64"
+          className="w-12 h-12"
+          role="img"
+          aria-hidden="true"
+        >
+          {/* Monograma A inspirado en cuerdas de un instrumento */}
           <path
-            d="M32 5 C22 14 10 21 13 34 C16 47 26 56 32 60 C38 56 48 47 51 34 C54 21 42 14 32 5Z"
-            fill="#20B8A5"
-          />
-
-          {/* Letra A */}
-          <path
-            d="M20 43 L32 17 L44 43 M25 33 H39"
+            d="M15.5 45.5 29.1 17.8c1.2-2.5 4.7-2.5 5.9 0l13.5 27.7"
             fill="none"
-            stroke="#183B4E"
-            strokeWidth="4"
+            stroke="#48D2C0"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
 
-          {/* Onda de sonido */}
+          {/* Onda musical que forma el travesaño de la A */}
           <path
-            d="M9 27 Q5 32 9 37 M55 27 Q59 32 55 37"
+            d="M22 35.5c3.2-4.8 6.3 4.8 9.6 0s6.5 4.8 10.4 0"
             fill="none"
             stroke="#F07858"
-            strokeWidth="3"
+            strokeWidth="4"
             strokeLinecap="round"
           />
+
+          {/* Punto de la nota: acento reconocible a tamaños pequeños */}
+          <circle cx="47.5" cy="18" r="4" fill="#F07858" />
         </svg>
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <span
-          className="text-xl font-black tracking-[0.13em] leading-tight"
+          className="text-[20px] font-black tracking-[0.1em] leading-none"
           style={{ color: textColor }}
         >
           ACORDES
@@ -44,9 +46,10 @@ function BrandLogo({ light = false, compact = false }) {
 
         {!compact && (
           <span
-            className="text-[10px] font-bold tracking-[0.28em] mt-1"
+            className="flex items-center gap-2 text-[9px] font-extrabold tracking-[0.3em] mt-1.5"
             style={{ color: subtitleColor }}
           >
+            <span className="block w-3.5 h-0.5 rounded-full bg-[#F07858]" />
             MAYORISTA
           </span>
         )}
