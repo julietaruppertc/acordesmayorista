@@ -20,7 +20,7 @@ import Payment from "./views/Payment.jsx";
 import OperatorStock from "./views/OperatorStock.jsx";
 import WholesaleManagement from "./views/WholesaleManagement.jsx";
 import WholesaleStatus from "./views/WholesaleStatus.jsx";
-
+import { useCart } from "./context/CartContext";
 import BrandLogo from "./components/BrandLogo.jsx";
 import { useAuthContext } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -30,6 +30,7 @@ function Home() {
   const { user } = useAuthContext();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { totalItems } = useCart();
 
   const handleLogout = () => {
     logout();
@@ -62,17 +63,23 @@ function Home() {
                   {user.email}
                 </span>
 
-                {user.rol === "operador" && (
-                  <>
-                    <Link to="/operador/stock" className="hover:text-[#20B8A5]">
-                      Gestión de stock
-                    </Link>
+               {user?.rol === "operador" && (
+  <Link to="/operador/stock" className="hover:text-[#20B8A5]">
+    Gestión de stock
+  </Link>
+)}
 
-                    <Link to="/operador/usuarios" className="hover:text-[#20B8A5]">
-                      Gestión de usuarios
-                    </Link>
-                  </>
-                )}
+{user?.rol === "admin" && (
+  <>
+    <Link to="/operador/stock" className="hover:text-[#20B8A5]">
+      Gestión de stock
+    </Link>
+
+    <Link to="/operador/usuarios" className="hover:text-[#20B8A5]">
+      Gestión de usuarios
+    </Link>
+  </>
+)}
 
                 <button
                   onClick={handleLogout}
@@ -93,11 +100,17 @@ function Home() {
           </nav>
 
           <Link
-            to="/carrito"
-            className="relative p-3 bg-[#E8F7F3] rounded-xl text-[#183B4E] hover:bg-[#D5F1EA]"
-          >
-            <ShoppingCart size={22} />
-          </Link>
+  to="/carrito"
+  className="relative p-3 bg-[#E8F7F3] rounded-xl text-[#183B4E] hover:bg-[#D5F1EA]"
+>
+  <ShoppingCart size={22} />
+
+  {totalItems > 0 && (
+    <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-5 h-5 px-1 bg-[#F07858] text-white text-xs font-extrabold rounded-full">
+      {totalItems}
+    </span>
+  )}
+</Link>
         </div>
       </header>
 
@@ -265,10 +278,13 @@ function App() {
         <Route path="/pago" element={<Payment />} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["operador"]} />}>
-        <Route path="/operador/stock" element={<OperatorStock />} />
-        <Route path="/operador/usuarios" element={<WholesaleManagement />} />
-      </Route>
+      <Route element={<ProtectedRoute allowedRoles={["operador", "admin"]} />}>
+  <Route path="/operador/stock" element={<OperatorStock />} />
+</Route>
+
+<Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+  <Route path="/operador/usuarios" element={<WholesaleManagement />} />
+</Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

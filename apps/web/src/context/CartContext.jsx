@@ -1,12 +1,26 @@
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]);
+  // Recuperar el carrito guardado al iniciar la aplicación.
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem("acordes_cart");
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (error) {
+      console.error("No se pudo recuperar el carrito:", error);
+      return [];
+    }
+  });
 
-  // Obtener el stock disponible, tanto de la API como de los mocks.
+  // Guardar automáticamente cada modificación del carrito.
+  useEffect(() => {
+    localStorage.setItem("acordes_cart", JSON.stringify(cart));
+  }, [cart]);
+
+  // Obtener el stock disponible.
   const getAvailableStock = (product) => {
     return Number(product.availableStock ?? product.stock ?? 0);
   };
@@ -91,8 +105,7 @@ export function CartProvider({ children }) {
 
   // Importe total.
   const totalPrice = cart.reduce(
-    (total, item) =>
-      total + Number(item.price) * item.quantity,
+    (total, item) => total + Number(item.price) * item.quantity,
     0
   );
 

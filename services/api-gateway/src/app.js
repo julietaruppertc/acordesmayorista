@@ -30,11 +30,16 @@ function createApp({ authUrl, coreUrl, corePool, onCoreSelected, publicKey, cors
     next();
   });
   app.use(cors({
-    origin: corsOrigin,
-    methods: ['GET', 'POST', 'PATCH'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'X-Trace-Id', 'X-Webhook-Signature'],
-    exposedHeaders: ['X-Trace-Id']
-  }));
+  origin: corsOrigin,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Authorization',
+    'Content-Type',
+    'X-Trace-Id',
+    'X-Webhook-Signature'
+  ],
+  exposedHeaders: ['X-Trace-Id']
+}));
 
   const proxyOptions = (target, onUnavailable) => ({
     target,

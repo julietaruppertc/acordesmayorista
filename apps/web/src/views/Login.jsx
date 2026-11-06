@@ -27,8 +27,12 @@ function Login() {
     e.preventDefault();
 
     try {
-      await login({ email, password });
-      navigate("/");
+      const user = await login({ email, password });
+
+console.log("Usuario autenticado:", user);
+console.log("Rol del usuario:", user?.rol);
+
+navigate("/");
     } catch {
       // El error se muestra desde useAuth.
     }
