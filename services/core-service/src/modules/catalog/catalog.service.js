@@ -6,6 +6,7 @@ function mapProduct(row) {
     id: row.id,
     name: row.name,
     description: row.description,
+    imageUrl: row.image_url,
     category: row.category,
     price: Number(row.price),
     availableStock: Number(row.available_stock),

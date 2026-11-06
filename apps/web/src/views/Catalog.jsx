@@ -188,12 +188,21 @@ function Catalog() {
                   key={product.id}
                   className="product-card overflow-hidden flex flex-col"
                 >
-                  <div className="h-48 bg-gradient-to-br from-[#E8F7F3] to-[#F4F0E8] flex items-center justify-center relative">
-                    <Package
-                      size={65}
-                      strokeWidth={1}
-                      className="text-[#20B8A5]"
-                    />
+                  <div className="h-48 bg-[#F4F0E8] flex items-center justify-center relative overflow-hidden">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Package
+                        size={65}
+                        strokeWidth={1}
+                        className="text-[#20B8A5]"
+                      />
+                    )}
 
                     <span className="absolute top-4 left-4 bg-white px-3 py-1 rounded-full text-xs font-bold text-[#183B4E]">
                       {product.category || "Instrumentos"}
