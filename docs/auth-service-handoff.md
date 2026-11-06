@@ -16,7 +16,7 @@ Variables obligatorias en entorno (`.env`):
 
 ```env
 PORT=4001
-MONGO_URI=mongodb+srv://<usuario>:<password>@cluster0.pzx2vs7.mongodb.net/acordes_auth?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<USUARIO>:<PASSWORD>@cluster0.pzx2vs7.mongodb.net/acordes_auth?retryWrites=true&w=majority
 JWT_EXPIRES_IN=1h
 NODE_ENV=production
 ```
@@ -180,3 +180,6 @@ Desde `services/auth-service`, ejecutar `npm test`. Las pruebas de seguridad usa
 
 - No se implementa lista negra ni revocación centralizada en tiempo real; la invalidación de credenciales se apoya en el tiempo de expiración corto (`JWT_EXPIRES_IN=1h`).
 - El par de claves se almacena en el sistema de archivos local y variables de entorno, prescindiendo de servicios dedicados de Key Vault o KMS externos.
+
+## Errores internos: integración selectiva 2026-11-06
+Registro, login y aprobación mayorista devuelven HTTP 500 con error textual genérico: Ocurrió un error interno. No se devuelve error.message ni información de conexión. Se conservan los mensajes públicos existentes de validación, credenciales inválidas y correo duplicado para mantener compatibilidad con Frontend. Las pruebas cubren esa compatibilidad y la ausencia de detalles internos en las tres operaciones.

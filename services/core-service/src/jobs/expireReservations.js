@@ -1,6 +1,7 @@
 const { pool, withTransaction } = require('../config/database');
 const env = require('../config/env');
 const outbox = require('../modules/outbox/outbox.repository');
+const AppError = require('../shared/AppError');
 
 async function expireBatch() {
   return withTransaction(async (client) => {
@@ -19,7 +20,7 @@ async function expireBatch() {
         [order.id]
       );
       for (const item of items.rows) {
-        await client.query(
+        const released = await client.query(
           `UPDATE inventory.stock
               SET reserved = reserved - $1,
                   version = version + 1,
@@ -27,6 +28,9 @@ async function expireBatch() {
             WHERE product_id = $2 AND reserved >= $1`,
           [item.quantity, item.product_id]
         );
+        if (released.rowCount !== 1) {
+          throw new AppError(409, 'RESERVATION_STATE_CONFLICT', 'La reserva no pudo liberarse.');
+        }
       }
       await client.query(
         `UPDATE orders.orders SET status = 'EXPIRED', updated_at = NOW() WHERE id = $1`,

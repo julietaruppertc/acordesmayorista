@@ -125,3 +125,50 @@ test('Auth rechaza tokens con emisor incorrecto o vencidos', () => {
     assert.equal(passed, false);
   }
 });
+
+
+test('login invalido conserva el mensaje publico del Frontend', async () => {
+  const original = User.findOne;
+  User.findOne = async () => null;
+  try {
+    const res = response();
+    await authController.login({ body: { email: 'missing@example.com', password: 'invalid' } }, res);
+    assert.equal(res.statusCode, 401);
+    assert.deepEqual(res.body, { error: 'Credenciales inv\u00e1lidas' });
+  } finally { User.findOne = original; }
+});
+
+test('registro duplicado conserva el mensaje publico del Frontend', async () => {
+  const original = User.findOne;
+  User.findOne = async () => ({ _id: 'existing' });
+  try {
+    const res = response();
+    await authController.register({ body: { email: 'existing@example.com', password: 'invalid' } }, res);
+    assert.equal(res.statusCode, 409);
+    assert.deepEqual(res.body, { error: 'El email ya se encuentra registrado' });
+  } finally { User.findOne = original; }
+});
+
+test('errores internos de registro, login y aprobacion no exponen detalles', async () => {
+  const originalFind = User.findOne;
+  const originalUpdate = User.findByIdAndUpdate;
+  const failure = () => { throw new Error('sensitive-database-connection-details'); };
+  User.findOne = failure;
+  User.findByIdAndUpdate = failure;
+  try {
+    for (const [controller, req] of [
+      [authController.register, { body: { email: 'test@example.com', password: 'invalid' } }],
+      [authController.login, { body: { email: 'test@example.com', password: 'invalid' } }],
+      [authController.approveWholesale, { params: { id: 'existing' }, body: { estado: 'APROBADO' } }]
+    ]) {
+      const res = response();
+      await controller(req, res);
+      assert.equal(res.statusCode, 500);
+      assert.deepEqual(res.body, { error: 'Ocurri\u00f3 un error interno.' });
+      assert.equal(JSON.stringify(res.body).includes('sensitive'), false);
+    }
+  } finally {
+    User.findOne = originalFind;
+    User.findByIdAndUpdate = originalUpdate;
+  }
+});

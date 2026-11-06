@@ -1,4 +1,7 @@
 # Acordes Mayorista — Plataforma de Comercio Electrónico B2B / B2C
+
+Estado de integración, pruebas y pendientes del equipo: [entrega 2026-11-06](docs/entrega-equipo-2026-11-06.md).
+
 ---
 
 ## 1. Descripción y Objetivos Arquitectónicos

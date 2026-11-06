@@ -167,3 +167,7 @@ Resultado esperado:
 - Los eventos no usan Kafka o RabbitMQ; se implementa Transactional Outbox.
 - Los encabezados de identidad solo son confiables cuando el Core permanece detrás del Gateway en la red privada.
 - El valor de ejemplo de `PAYMENT_WEBHOOK_SECRET` está prohibido cuando `NODE_ENV=production`.
+
+## Imagen opcional en catálogo
+
+El DTO de GET /api/products y GET /api/products/:id incluye imageUrl (string o null), obtenido de catalog.products.image_url. Para las imágenes incluidas, usa rutas /products/... servidas por el Frontend. Un valor null conserva el icono alternativo. No cambia id, price, availableStock, version ni expectedVersion del checkout. Ver shared/contracts/core/product-list.response.json. La migración 003_product_images.sql debe estar aplicada antes de ejecutar el Core nuevo. Supabase se verificó en lectura el 2026-11-06 y ya tiene la columna; el entorno local aislado requiere actualizar su esquema. Git pull no reconstruye las imágenes Docker existentes.

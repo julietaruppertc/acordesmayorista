@@ -57,7 +57,7 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 
@@ -103,7 +103,7 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 
@@ -129,7 +129,7 @@ exports.approveWholesale = async (req, res) => {
 
     res.json({ message: `Estado actualizado a ${estado}`, user });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 

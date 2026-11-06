@@ -1,0 +1,59 @@
+﻿# Applications run locally; databases are Atlas/Supabase from ignored private .env files.
+# Do not combine this file with docker-compose.test.yml or enable workers here.
+name: acordes-cloud-check
+
+services:
+  auth-service:
+    image: acordes-prueba-auth-service:latest
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    env_file: services/auth-service/.env
+    environment:
+      PORT: 4001
+      NODE_ENV: development
+    command:
+      - node
+      - -e
+      - "const m=require('mongoose');m.set('autoCreate',false);m.set('autoIndex',false);require('./src/index');"
+    volumes:
+      - type: bind
+        source: ./shared/keys/private.pem
+        target: /app/shared/keys/private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [cloud-backend]
+
+  core-service:
+    image: acordes-prueba-core-service:latest
+    build:
+      context: ./services/core-service
+    env_file: services/core-service/.env
+    environment:
+      CORE_PORT: 4002
+      NODE_ENV: development
+      DATABASE_SSL: "true"
+    networks: [cloud-backend]
+
+  api-gateway:
+    image: acordes-prueba-api-gateway:latest
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    environment:
+      GATEWAY_PORT: 4000
+      AUTH_SERVICE_URL: http://auth-service:4001
+      CORE_SERVICE_URL: http://core-service:4002
+      CORS_ORIGIN: http://localhost:3000
+      PUBLIC_KEY_PATH: /app/shared/keys/public.pem
+      NODE_ENV: development
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      - auth-service
+      - core-service
+    networks: [cloud-backend]
+
+networks:
+  cloud-backend:

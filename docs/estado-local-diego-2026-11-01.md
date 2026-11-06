@@ -184,3 +184,14 @@ Ver docs/gateway-balance-demo.md: Gateway 10 pruebas aprobadas, Docker con dos C
 ## Preparación de integración a main
 
 Diego autorizó explícitamente publicar este lote en main para que Camila pueda tomarlo. Esto reemplaza, para esta publicación concreta, la restricción previa de trabajar y publicar solo en trabajo/diego. Se agregó docs/frontend-handoff.md y se aclaró el estado no desplegado de Railway. No se incorporan credenciales ni archivos privados. La publicación requiere pruebas y revisión del contenido; cloud, Frontend real y RNF siguen pendientes.
+
+## Conexión con Atlas/Supabase — 2026-11-06
+
+Diego confirmó que los datos compartidos son de prueba y autorizó comprobar su uso. Se agregó docker-compose.cloud-check.yml como variante local con Auth, Core y Gateway conectados a los .env privados cloud; se apagaron antes los contenedores de bases locales. Sin cambios de contratos ni lógica de negocio.
+
+Atlas conectado; Core /ready y catálogo por Gateway HTTP 200, total 33 productos (primera página 20), traza conservada. Edge verificó registro de una cuenta ficticia, login y lectura de pedidos; persistencia de usuario confirmada por consulta a Atlas. Sin pedidos, pagos, migraciones, seeds, worker o expiración durante esta comprobación.
+
+Conexión del cliente pg al pooler cifrada. La configuración existente rejectUnauthorized:false no verifica el certificado; queda pendiente con Paz antes de producción. Ver docs/conexion-cloud-2026-11-06.md para evidencia, límites y comandos. Servicios y Frontend se mantienen encendidos para continuar pruebas; cloud de bases no equivale a despliegue de aplicaciones. Sin commit/push.
+
+## Correcciones selectivas — 2026-11-06
+Guard transaccional de expiración + test real de rollback incorporados; Auth oculta errores internos sin alterar mensajes públicos. Suites: Auth 9, Gateway 10, Core 14 aprobadas; smoke con APIs reales locales aprobado. No se fusionó depuracion completa. Detalles en pruebas-correcciones-2026-11-06.md; pendientes restantes conservados en recomendaciones-depuracion-2026-11-06.md. Sin commit/push.
