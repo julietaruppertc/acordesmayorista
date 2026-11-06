@@ -1,16 +1,18 @@
 # Dependencias
 node_modules/
+**/node_modules/
 dist/
 build/
 .cache/
 
-# Entornos y credenciales
 .env
 .env.local
 .env.*.local
 *.pem
 *.key
 shared/keys/private.key
+shared/keys/private.pem
+services/*/.env
 
 # Logs
 *.log
@@ -21,12 +23,7 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
-shared/keys/private.pem
-*.pem
 !shared/keys/public.pem
-
-.env
-services/auth-service/.env
 
 # Configuracion privada trasladada desde otra PC
 /services/auth-service/env

@@ -30,6 +30,11 @@ app.get('/health', (req, res) => {
 // Rutas de autenticación
 app.use('/auth', authRoutes);
 
+app.use((error, _req, res, _next) => {
+  console.error('[AUTH]', error);
+  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error.' });
+});
+
 // Conexión a MongoDB Atlas
 const mongoUri = process.env.MONGO_URI;
 
