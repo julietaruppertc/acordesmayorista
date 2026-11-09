@@ -26,6 +26,7 @@ function OperatorStock() {
   const [usingMocks, setUsingMocks] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [stockAmounts, setStockAmounts] = useState({});
 
   const showMessage = (text, type) => {
     setMessage(text);
@@ -37,8 +38,7 @@ function OperatorStock() {
       setLoading(true);
       setMessage("");
 
-      const response = await getProducts();
-      const productsFromApi = response.data;
+      const productsFromApi = await getProducts();
 
       if (!Array.isArray(productsFromApi)) {
         throw new Error("El catálogo no tiene el formato esperado.");
@@ -109,6 +109,14 @@ function OperatorStock() {
         product.version
       );
 
+      // Reiniciar el campo solamente después de guardar correctamente.
+      if (amount > 0) {
+        setStockAmounts((current) => ({
+          ...current,
+          [product.id]: "1",
+        }));
+      }
+
       await loadProducts();
 
       showMessage("Stock actualizado correctamente.", "success");
@@ -175,7 +183,7 @@ function OperatorStock() {
 
           <div className="flex items-center gap-2 text-sm font-semibold text-[#183B4E]">
             <ShieldCheck size={19} className="text-[#20B8A5]" />
-            Panel de operador
+            Panel administrativo
           </div>
         </header>
 
@@ -404,18 +412,47 @@ function OperatorStock() {
                         </p>
                       </div>
 
-                      <button
-                        onClick={() => updateStock(product, 1)}
-                        disabled={
-                          usingMocks ||
-                          saving ||
-                          loading
-                        }
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#183B4E] text-white hover:bg-[#24566D] disabled:opacity-30 disabled:cursor-not-allowed transition"
-                        aria-label={`Aumentar stock de ${product.name}`}
-                      >
-                        <Plus size={18} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={stockAmounts[product.id] ?? "1"}
+                          onChange={(e) =>
+                            setStockAmounts((current) => ({
+                              ...current,
+                              [product.id]: e.target.value,
+                            }))
+                          }
+                          disabled={usingMocks || saving || loading}
+                          className="w-20 h-10 text-center border border-[#E8E3DA] rounded-xl text-[#183B4E] font-bold focus:outline-none focus:border-[#20B8A5]"
+                          aria-label={`Cantidad de unidades para agregar a ${product.name}`}
+                        />
+
+                        <button
+                          onClick={() => {
+                            const amount = Number(
+                              stockAmounts[product.id] ?? 1
+                            );
+
+                            if (!Number.isInteger(amount) || amount <= 0) {
+                              showMessage(
+                                "Ingresá una cantidad válida de unidades.",
+                                "error"
+                              );
+                              return;
+                            }
+
+                            updateStock(product, amount);
+                          }}
+                          disabled={usingMocks || saving || loading}
+                          className="flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-[#183B4E] text-white hover:bg-[#24566D] disabled:opacity-30 disabled:cursor-not-allowed transition"
+                          aria-label={`Agregar unidades al stock de ${product.name}`}
+                        >
+                          <Plus size={18} />
+                          <span className="text-sm font-bold">Agregar</span>
+                        </button>
+                      </div>
 
                       {saving && (
                         <span className="text-xs text-slate-500 font-semibold">

@@ -1,3 +1,4 @@
+
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -53,6 +54,7 @@ exports.register = async (req, res) => {
         id: user._id,
         email: user.email,
         rol: user.rol,
+        cuit: user.cuit,
         estado_mayorista: user.estado_mayorista
       }
     });
@@ -99,6 +101,7 @@ exports.login = async (req, res) => {
         id: user._id,
         email: user.email,
         rol: user.rol,
+        cuit: user.cuit,
         estado_mayorista: user.estado_mayorista
       }
     });
@@ -137,4 +140,186 @@ exports.approveWholesale = async (req, res) => {
 exports.getPublicKey = (req, res) => {
   res.setHeader('Content-Type', 'text/plain');
   res.send(publicKey);
+};
+
+
+
+// 5. Listar usuarios para el panel administrativo
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find({ rol: 'cliente' })
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const formattedUsers = users.map((user) => ({
+      ...user,
+      id: user._id.toString(),
+    }));
+
+    return res.status(200).json({
+      users: formattedUsers,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 6. Crear usuario desde el panel administrativo
+exports.createUser = async (req, res) => {
+  try {
+    const { email, password, cuit } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'El email y la contraseña son obligatorios',
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: 'El email ya se encuentra registrado',
+      });
+    }
+
+    const normalizedCuit = cuit?.trim() || null;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      email: normalizedEmail,
+      password: hashedPassword,
+      rol: 'cliente',
+      cuit: normalizedCuit,
+      estado_mayorista: normalizedCuit ? 'PENDIENTE' : 'NO_APLICA',
+    });
+
+    await user.save();
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
+    return res.status(201).json({
+      message: 'Usuario creado correctamente',
+      user: {
+        ...safeUser,
+        id: user._id.toString(),
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        error: 'El email ya se encuentra registrado',
+      });
+    }
+
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 7. Modificar usuario desde el panel administrativo
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, cuit } = req.body;
+
+    const user = await User.findOne({
+      _id: id,
+      rol: 'cliente',
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuario no encontrado',
+      });
+    }
+
+    if (email !== undefined) {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail) {
+        return res.status(400).json({
+          error: 'El email no puede estar vacío',
+        });
+      }
+
+      const existingUser = await User.findOne({
+        email: normalizedEmail,
+        _id: { $ne: id },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({
+          error: 'El email ya se encuentra registrado',
+        });
+      }
+
+      user.email = normalizedEmail;
+    }
+
+    if (cuit !== undefined) {
+      const normalizedCuit = cuit?.trim() || null;
+
+      if (!normalizedCuit) {
+        user.cuit = null;
+        user.estado_mayorista = 'NO_APLICA';
+      } else {
+        if (!user.cuit) {
+          user.estado_mayorista = 'PENDIENTE';
+        }
+
+        user.cuit = normalizedCuit;
+      }
+    }
+
+    await user.save();
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
+    return res.status(200).json({
+      message: 'Usuario actualizado correctamente',
+      user: {
+        ...safeUser,
+        id: user._id.toString(),
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        error: 'El email ya se encuentra registrado',
+      });
+    }
+
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 8. Eliminar usuario desde el panel administrativo
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOneAndDelete({
+      _id: id,
+      rol: 'cliente',
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuario no encontrado',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Usuario eliminado correctamente',
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };

@@ -15,7 +15,7 @@ export function useProducts() {
         setError("");
 
         const response = await getProducts();
-        const productsFromApi = response.data;
+        const productsFromApi = response;
 
         if (!Array.isArray(productsFromApi)) {
           throw new Error(
