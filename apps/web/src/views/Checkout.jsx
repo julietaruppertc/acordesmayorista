@@ -23,7 +23,7 @@ import { createOrder } from "../services/orderService";
 
 function Checkout() {
   const navigate = useNavigate();
-  const { cart, totalPrice } = useCart();
+  const { cart, totalPrice, clearCart } = useCart();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -97,6 +97,7 @@ function Checkout() {
         })
       );
 
+      clearCart();
       navigate("/pago");
     } catch (err) {
       console.error("Error al crear el pedido:", err);
@@ -397,14 +398,14 @@ function Checkout() {
                 "Creando pedido..."
               ) : (
                 <>
-                  Continuar al pago
+                  Enviar pedido
                   <ArrowRight size={19} />
                 </>
               )}
             </button>
 
             <p className="text-xs text-slate-400 text-center mt-4">
-              Revisá tus datos antes de confirmar el pedido.
+              Revisá tus datos antes de enviar el pedido.
             </p>
           </form>
 

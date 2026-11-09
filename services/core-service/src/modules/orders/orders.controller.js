@@ -37,4 +37,12 @@ async function getById(req, res) {
   res.status(200).json({ data, traceId: req.context.traceId });
 }
 
-module.exports = { checkout, list, getById };
+async function resolve(req, res) {
+  const id = idSchema.parse(req.params.id);
+  const { decision } = z.object({ decision: z.enum(['APPROVED', 'REJECTED']) }).parse(req.body);
+  const simulator = require('../payments/paymentSimulator');
+  const data = await simulator.resolveOrder(id, decision, req.context);
+  res.status(200).json({ data, traceId: req.context.traceId });
+}
+
+module.exports = { checkout, list, getById, resolve };

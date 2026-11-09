@@ -15,6 +15,7 @@ const schema = z.object({
     .string()
     .default('false')
     .transform((value) => value.toLowerCase() === 'true'),
+  ENABLE_PAYMENT_SIMULATOR: z.enum(['true', 'false']).default('false').transform(value => value === 'true'),
   RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(5),
   RESERVATION_JOB_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
   OUTBOX_POLL_INTERVAL_SECONDS: z.coerce.number().int().positive().default(5),

@@ -53,17 +53,26 @@ async function runOnce() {
 }
 
 if (require.main === module) {
-  const intervalMs = env.RESERVATION_JOB_INTERVAL_SECONDS * 1000;
-  runOnce().catch(console.error);
-  const timer = setInterval(() => runOnce().catch(console.error), intervalMs);
-
+  let stopping = false;
+  let timer;
+  let active;
+  function schedule() {
+    active = runOnce()
+      .catch(error => console.error('[RESERVATIONS]', error.code || 'EXPIRATION_FAILED'))
+      .finally(() => {
+        if (!stopping) timer = setTimeout(schedule, env.RESERVATION_JOB_INTERVAL_SECONDS * 1000);
+      });
+  }
   async function shutdown() {
-    clearInterval(timer);
+    if (stopping) return;
+    stopping = true;
+    clearTimeout(timer);
+    await active;
     await pool.end();
-    process.exit(0);
   }
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+  schedule();
 }
 
 module.exports = { expireBatch };

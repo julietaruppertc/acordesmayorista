@@ -17,6 +17,33 @@ services:
     build:
       context: ./services/core-service
     env_file: services/core-service/.env
+    environment:
+      ENABLE_PAYMENT_SIMULATOR: "true"
+      RESERVATION_TTL_MINUTES: 5
+    networks: [backend]
+
+  outbox-worker:
+    image: acordes-mayorista-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/outboxWorker.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
+    networks: [backend]
+
+  reservation-expirer:
+    image: acordes-mayorista-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      DATABASE_SSL: "true"
+      RESERVATION_JOB_INTERVAL_SECONDS: 30
+    command: [node, src/jobs/expireReservations.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
     networks: [backend]
 
   api-gateway:

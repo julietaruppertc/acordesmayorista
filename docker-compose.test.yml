@@ -6,6 +6,7 @@ x-core-env: &core-env
   DATABASE_URL: postgresql://acordes_test:local_test_only@postgres:5432/acordes_test
   DATABASE_SSL: "false"
   PAYMENT_WEBHOOK_SECRET: local-isolated-test-secret-not-for-production
+  ENABLE_PAYMENT_SIMULATOR: "true"
   RESERVATION_TTL_MINUTES: 5
 
 services:
@@ -69,6 +70,31 @@ services:
     profiles: [balance]
     image: acordes-prueba-core-service
     environment: *core-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
+  outbox-worker:
+    profiles: [automation]
+    image: acordes-prueba-core-service:latest
+    environment:
+      <<: *core-env
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/outboxWorker.js]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
+  reservation-expirer:
+    profiles: [automation]
+    image: acordes-prueba-core-service:latest
+    environment: *core-env
+    command: [node, src/jobs/expireReservations.js]
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy

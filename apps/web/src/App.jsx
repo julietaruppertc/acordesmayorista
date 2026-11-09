@@ -16,6 +16,7 @@ import Register from "./views/Register.jsx";
 import Catalog from "./views/Catalog.jsx";
 import Cart from "./views/Cart.jsx";
 import Checkout from "./views/Checkout.jsx";
+import OrderManagement from './views/OrderManagement.jsx';
 import Payment from "./views/Payment.jsx";
 import OperatorStock from "./views/OperatorStock.jsx";
 import WholesaleManagement from "./views/WholesaleManagement.jsx";
@@ -78,6 +79,7 @@ function Home() {
     <Link to="/operador/usuarios" className="hover:text-[#20B8A5]">
       Gestión de usuarios
     </Link>
+    <Link to="/admin/pedidos" className="hover:text-[#20B8A5]">Gestión de pedidos</Link>
   </>
 )}
 
@@ -284,6 +286,7 @@ function App() {
 
 <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
   <Route path="/operador/usuarios" element={<WholesaleManagement />} />
+  <Route path="/admin/pedidos" element={<OrderManagement />} />
 </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

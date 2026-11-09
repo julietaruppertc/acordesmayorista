@@ -1,5 +1,5 @@
 ﻿# Applications run locally; databases are Atlas/Supabase from ignored private .env files.
-# Do not combine this file with docker-compose.test.yml or enable workers here.
+# Do not combine with docker-compose.test.yml. Expirer and Outbox worker process test data automatically.
 name: acordes-cloud-check
 
 services:
@@ -31,9 +31,37 @@ services:
       context: ./services/core-service
     env_file: services/core-service/.env
     environment:
+      ENABLE_PAYMENT_SIMULATOR: "true"
+      RESERVATION_TTL_MINUTES: 5
       CORE_PORT: 4002
       NODE_ENV: development
       DATABASE_SSL: "true"
+    networks: [cloud-backend]
+
+  outbox-worker:
+    image: acordes-prueba-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_SSL: "true"
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/outboxWorker.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
+    networks: [cloud-backend]
+
+  reservation-expirer:
+    image: acordes-prueba-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      DATABASE_SSL: "true"
+      RESERVATION_JOB_INTERVAL_SECONDS: 30
+    command: [node, src/jobs/expireReservations.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
     networks: [cloud-backend]
 
   api-gateway:

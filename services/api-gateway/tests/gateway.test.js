@@ -216,3 +216,17 @@ test('CRUD de usuarios exige admin y conserva Authorization para Auth', async ()
     assert.equal(allowed.body.userRole, null);
   }
 });
+
+
+test('resolver pedidos exige admin y no acepta identidad falsificada', async () => {
+  const path = '/api/orders/order-1/resolve';
+  assert.equal((await request(path, { method: 'POST', headers: { 'X-User-Role': 'admin' } })).status, 401);
+  for (const role of ['cliente', 'operador']) {
+    assert.equal((await request(path, { method: 'POST', headers: { Authorization: `Bearer ${sign(role)}` } })).status, 403);
+  }
+  const result = await request(path, { method: 'POST', headers: { Authorization: `Bearer ${sign('admin')}`, 'X-User-Id': 'forged' } });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.service, 'core');
+  assert.equal(result.body.userRole, 'admin');
+  assert.equal(result.body.userId, '507f1f77bcf86cd799439011');
+});

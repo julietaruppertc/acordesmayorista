@@ -73,6 +73,10 @@ function routePolicy(method, pathname) {
     return { service: 'core', access: 'roles', roles: ['cliente'] };
   }
 
+  if (method === 'POST' && /^\/api\/orders\/[^/]+\/resolve$/.test(pathname)) {
+    return { service: 'core', access: 'roles', roles: ['admin'] };
+  }
+
   // Pedidos
   if (
     method === 'GET' &&

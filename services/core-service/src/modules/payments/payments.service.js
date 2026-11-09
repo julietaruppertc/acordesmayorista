@@ -94,7 +94,7 @@ async function handleWebhook(input, traceId) {
       return { status: 'ignored', reason: `order_${order.status.toLowerCase()}` };
     }
 
-    if (input.status === 'APPROVED' && new Date(order.expires_at).getTime() <= Date.now()) {
+    if (new Date(order.expires_at).getTime() <= Date.now()) {
       await releaseReservation(client, order.id);
       await client.query(
         `UPDATE orders.orders SET status = 'EXPIRED', updated_at = NOW() WHERE id = $1`,
