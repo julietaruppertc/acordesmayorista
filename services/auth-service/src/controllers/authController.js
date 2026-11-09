@@ -161,7 +161,7 @@ exports.getUsers = async (req, res) => {
       users: formattedUsers,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 
@@ -170,10 +170,14 @@ exports.createUser = async (req, res) => {
   try {
     const { email, password, cuit } = req.body;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
       return res.status(400).json({
         error: 'El email y la contraseña son obligatorios',
       });
+    }
+
+    if (cuit != null && typeof cuit !== 'string') {
+      return res.status(400).json({ error: 'CUIT inv\u00e1lido' });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -218,7 +222,7 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 
@@ -226,7 +230,14 @@ exports.createUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!/^[a-f0-9]{24}$/i.test(id)) {
+      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+    }
     const { email, cuit } = req.body;
+    if ((email !== undefined && typeof email !== 'string') ||
+        (cuit != null && typeof cuit !== 'string')) {
+      return res.status(400).json({ error: 'Datos de usuario inv\u00e1lidos' });
+    }
 
     const user = await User.findOne({
       _id: id,
@@ -269,7 +280,7 @@ exports.updateUser = async (req, res) => {
         user.cuit = null;
         user.estado_mayorista = 'NO_APLICA';
       } else {
-        if (!user.cuit) {
+        if (user.cuit !== normalizedCuit) {
           user.estado_mayorista = 'PENDIENTE';
         }
 
@@ -296,7 +307,7 @@ exports.updateUser = async (req, res) => {
       });
     }
 
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };
 
@@ -304,6 +315,9 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!/^[a-f0-9]{24}$/i.test(id)) {
+      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+    }
 
     const user = await User.findOneAndDelete({
       _id: id,
@@ -320,6 +334,6 @@ exports.deleteUser = async (req, res) => {
       message: 'Usuario eliminado correctamente',
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
   }
 };

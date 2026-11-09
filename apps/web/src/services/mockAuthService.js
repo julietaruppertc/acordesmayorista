@@ -222,7 +222,7 @@ export const mockUpdateUser = async (userId, changes) => {
   let estadoMayorista = null;
 
   if (cuit) {
-    estadoMayorista = previousUser.cuit
+    estadoMayorista = previousUser.cuit === cuit
       ? changes.estado_mayorista || previousUser.estado_mayorista
       : "PENDIENTE";
   }

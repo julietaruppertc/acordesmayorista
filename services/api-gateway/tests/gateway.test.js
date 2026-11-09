@@ -198,3 +198,21 @@ test('reenvía el webhook firmado sin modificar los bytes del cuerpo', async () 
   assert.equal(result.body.traceId, 'trace-payment-1');
   assert.equal(result.body.userRole, null);
 });
+
+
+test('CRUD de usuarios exige admin y conserva Authorization para Auth', async () => {
+  for (const [method, path] of [['GET', '/auth/users'], ['POST', '/auth/users'], ['PATCH', '/auth/users/u1'], ['DELETE', '/auth/users/u1']]) {
+    const missing = await request(path, { method });
+    assert.equal(missing.status, 401);
+    for (const role of ['cliente', 'operador']) {
+      const denied = await request(path, { method, headers: { Authorization: `Bearer ${sign(role)}`, 'X-User-Role': 'admin' } });
+      assert.equal(denied.status, 403);
+    }
+    const allowed = await request(path, { method, headers: { Authorization: `Bearer ${sign('admin')}` } });
+    assert.equal(allowed.status, 200);
+    assert.equal(allowed.body.service, 'auth');
+    assert.equal(allowed.body.method, method);
+    assert.equal(allowed.body.authorizationPresent, true);
+    assert.equal(allowed.body.userRole, null);
+  }
+});

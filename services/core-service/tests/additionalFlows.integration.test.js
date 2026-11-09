@@ -71,6 +71,25 @@ afterAll(async () => {
 });
 
 describe.sequential('Reglas adicionales del Core', () => {
+  it('ajusta stock fisico manteniendo reservas y rechazando version obsoleta', async () => {
+    const productId = await createProduct(10);
+    const order = await checkout(productId, `physical-stock-${suffix}`, 3);
+    expect(order.status).toBe(201);
+    const before = await request(app).get(`/api/products/${productId}`);
+    expect(before.body.data).toMatchObject({ onHand: 10, reserved: 3, availableStock: 7 });
+    const adjusted = await request(app).patch(`/api/operator/products/${productId}/stock`)
+      .set(headers('operator', 'operador'))
+      .send({ onHand: before.body.data.onHand + 2, expectedVersion: before.body.data.version });
+    expect(adjusted.status).toBe(200);
+    expect(adjusted.body.data).toMatchObject({ onHand: 12, reserved: 3, availableStock: 9 });
+    const stale = await request(app).patch(`/api/operator/products/${productId}/stock`)
+      .set(headers('operator', 'operador'))
+      .send({ onHand: 20, expectedVersion: before.body.data.version });
+    expect(stale.status).toBe(409);
+    const after = await request(app).get(`/api/products/${productId}`);
+    expect(after.body.data).toMatchObject({ onHand: 12, reserved: 3, availableStock: 9 });
+  });
+
   it('libera la reserva cuando el pago es rechazado', async () => {
     const productId = await createProduct(2);
     const order = await checkout(productId, `rejected-${suffix}`);

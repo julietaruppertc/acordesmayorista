@@ -9,6 +9,8 @@ function mapProduct(row) {
     imageUrl: row.image_url,
     category: row.category,
     price: Number(row.price),
+    onHand: Number(row.on_hand),
+    reserved: Number(row.reserved),
     availableStock: Number(row.available_stock),
     version: Number(row.version)
   };

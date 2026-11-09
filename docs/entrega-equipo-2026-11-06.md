@@ -83,3 +83,6 @@ El diagrama del README describe la arquitectura objetivo; actualmente las APIs s
 No subir .env, claves privadas, dumps, tokens, logs privados ni configuración privada trasladada desde otra PC. docker-compose.cloud-check.yml referencia secretos externos, no los contiene. La clave pública sí forma parte del contrato del Gateway. Evitar compartir la salida completa de compose config en la variante cloud; usar config --quiet.
 
 Los reportes con fecha son históricos: una frase «sin commit/push» describe el momento de esa prueba. Esta entrega reúne los cambios y los publica en main por instrucción de Diego, mediante push normal y conservando su historial. Al terminar las últimas pruebas se apagaron servicios y Docker, sin puertos del proyecto abiertos.
+
+## Actualización 2026-11-09
+Main integrado hasta 572dcab y correcciones posteriores locales: ver [integracion-main-2026-11-09.md](integracion-main-2026-11-09.md). Actualiza los pendientes de permisos, gestión de usuarios, CUIT y stock físico; conserva los límites de pago/cloud/lint. Revisar ese informe antes de tomar el estado histórico del 6 como estado actual.

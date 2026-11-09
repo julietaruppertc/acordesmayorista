@@ -83,9 +83,11 @@ function OperatorStock() {
   const updateStock = async (product, amount) => {
     if (usingMocks) return;
 
-    const currentStock = Number(
-      product.availableStock ?? product.stock ?? 0
-    );
+    const currentStock = product.onHand;
+    if (!Number.isInteger(currentStock) || currentStock < 0) {
+      showMessage("El backend debe informar el stock f\u00edsico para poder ajustarlo.", "error");
+      return;
+    }
 
     const newStock = currentStock + amount;
 

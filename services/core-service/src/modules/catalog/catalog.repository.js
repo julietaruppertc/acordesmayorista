@@ -38,6 +38,8 @@ async function listProducts({ page, pageSize, category, search }) {
             c.name AS category,
             p.price,
             GREATEST(s.on_hand - s.reserved, 0)::int AS available_stock,
+            s.on_hand,
+            s.reserved,
             s.version
        FROM catalog.products p
        JOIN catalog.categories c ON c.id = p.category_id
@@ -60,6 +62,8 @@ async function findProductById(id) {
             c.name AS category,
             p.price,
             GREATEST(s.on_hand - s.reserved, 0)::int AS available_stock,
+            s.on_hand,
+            s.reserved,
             s.version
        FROM catalog.products p
        JOIN catalog.categories c ON c.id = p.category_id

@@ -8,7 +8,9 @@
       "category": "Guitarras",
       "price": 250000,
       "availableStock": 5,
-      "version": 3
+      "version": 3,
+      "onHand": 5,
+      "reserved": 0
     }
   ],
   "pagination": {

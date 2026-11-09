@@ -183,3 +183,18 @@ Desde `services/auth-service`, ejecutar `npm test`. Las pruebas de seguridad usa
 
 ## Errores internos: integración selectiva 2026-11-06
 Registro, login y aprobación mayorista devuelven HTTP 500 con error textual genérico: Ocurrió un error interno. No se devuelve error.message ni información de conexión. Se conservan los mensajes públicos existentes de validación, credenciales inválidas y correo duplicado para mantener compatibilidad con Frontend. Las pruebas cubren esa compatibilidad y la ausencia de detalles internos en las tres operaciones.
+
+## Administración de clientes — integración 2026-11-09
+
+Gateway y Auth exigen JWT RS256 de admin en las cuatro rutas. Cliente/operador reciben 403 y sin token se recibe 401. Auth verifica el token independientemente; no confía en un rol enviado por el navegador.
+
+| Método | Ruta | Entrada | Respuesta correcta |
+| --- | --- | --- | --- |
+| GET | /auth/users | Sin cuerpo | 200 { users: [...] }, solo clientes y sin password |
+| POST | /auth/users | email, password, cuit opcional | 201 { message, user }, siempre rol cliente, password hasheado y no devuelto |
+| PATCH | /auth/users/:id | email y/o cuit | 200 { message, user }, solo clientes |
+| DELETE | /auth/users/:id | Sin cuerpo | 200 { message }, solo clientes; 404 si no existe |
+
+Edición/borrado rechazan ObjectId inválido con 400. Creación/edición rechazan tipos inválidos con 400; duplicados devuelven 409. Fallos inesperados devuelven 500 con error genérico textual, sin detalles internos. No se valida dígito verificador fiscal en este MVP. Login/registro incluyen ahora cuit en user, además del claim ya existente en JWT.
+
+Cambiar el CUIT requiere nueva aprobación (PENDIENTE); conservarlo mantiene el estado y quitarlo establece NO_APLICA. No hay revocación de JWT emitidos: renovar sesión para obtener claims actuales, incluso tras cambios o aprobación. Esta administración no reemplaza el procedimiento existente de creación de admin/operador ni elimina pedidos del Core al borrar un cliente.

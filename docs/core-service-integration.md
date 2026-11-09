@@ -171,3 +171,9 @@ Resultado esperado:
 ## Imagen opcional en catálogo
 
 El DTO de GET /api/products y GET /api/products/:id incluye imageUrl (string o null), obtenido de catalog.products.image_url. Para las imágenes incluidas, usa rutas /products/... servidas por el Frontend. Un valor null conserva el icono alternativo. No cambia id, price, availableStock, version ni expectedVersion del checkout. Ver shared/contracts/core/product-list.response.json. La migración 003_product_images.sql debe estar aplicada antes de ejecutar el Core nuevo. Supabase se verificó en lectura el 2026-11-06 y ya tiene la columna; el entorno local aislado requiere actualizar su esquema. Git pull no reconstruye las imágenes Docker existentes.
+
+## Stock físico y reservado — integración 2026-11-09
+
+GET /api/products y GET /api/products/:id agregan onHand y reserved, enteros no negativos, conservando availableStock y version. availableStock representa onHand menos reserved. No se agregan migraciones: ambos datos ya existen en inventory.stock.
+
+El panel de stock envía al PATCH existente el nuevo onHand calculado desde el stock físico y expectedVersion de la misma lectura. Ejemplo: onHand=10, reserved=3, availableStock=7; agregar 2 envía onHand=12. El resultado es 12/3/9. Calcular 7+2 como onHand sería incorrecto. Una versión obsoleta sigue devolviendo 409 sin pisar cambios; el Core sigue impidiendo onHand menor que reserved. Esta ampliación aditiva del DTO permite corregir el consumidor sin cambiar la transacción ni el endpoint.
