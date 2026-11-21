@@ -192,16 +192,9 @@ const updateStock = async (product, amount) => {
       <div className="max-w-6xl mx-auto">
 
         {/* Encabezado */}
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-10">
-          <Link to="/">
-            <BrandLogo />
-          </Link>
+        
 
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#183B4E]">
-            <ShieldCheck size={19} className="text-[#20B8A5]" />
-            Panel administrativo
-          </div>
-        </header>
+         
 
         {/* Título */}
         <div className="mb-9">

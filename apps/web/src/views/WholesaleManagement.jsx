@@ -289,16 +289,7 @@ function WholesaleManagement() {
     <main className="min-h-screen bg-[#F4F0E8] px-5 py-8 md:px-8 md:py-12">
       <div className="max-w-7xl mx-auto">
 
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-10">
-          <Link to="/">
-            <BrandLogo />
-          </Link>
-
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#183B4E]">
-            <ShieldCheck size={19} className="text-[#20B8A5]" />
-            Panel administrativo
-          </div>
-        </header>
+        
 
         <div className="mb-9">
           <Link

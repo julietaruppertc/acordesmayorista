@@ -9,7 +9,7 @@ import {
   Mail,
 } from "lucide-react";
 import { useAuthContext } from "../context/AuthContext";
-import BrandLogo from "../components/BrandLogo";
+
 
 function WholesaleStatus() {
   const { user } = useAuthContext();
@@ -19,12 +19,8 @@ function WholesaleStatus() {
   return (
     <main className="min-h-screen bg-[#F4F0E8] px-5 py-10 flex flex-col">
 
-      {/* Encabezado */}
-      <header className="max-w-6xl w-full mx-auto">
-        <Link to="/" className="inline-flex">
-          <BrandLogo />
-        </Link>
-      </header>
+     
+      
 
       {/* Contenido */}
       <div className="flex-1 flex items-center justify-center py-12">
