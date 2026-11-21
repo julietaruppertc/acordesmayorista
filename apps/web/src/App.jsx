@@ -139,12 +139,7 @@ function Navbar() {
                     Iniciar sesión
                   </Link>
 
-                  <Link
-                    to="/login"
-                    className="hover:text-[#20B8A5] transition"
-                  >
-                    Registrarse
-                  </Link>
+                 
                 </>
               )
             )}

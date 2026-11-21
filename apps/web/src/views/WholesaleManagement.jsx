@@ -19,6 +19,8 @@ import {
   X,
   Save,
   UserPlus,
+  BrainCircuit,
+  FileCheck,
 } from "lucide-react";
 
 import {
@@ -57,6 +59,81 @@ const userService = DEMO_MODE
       deleteUser,
       updateWholesaleStatus,
     };
+
+// Auditoría de CUIT realizada por inteligencia artificial.
+function AuditInfo({ audit }) {
+  if (!audit?.procesado) {
+    return (
+      <div className="space-y-1">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+          <Clock size={13} />
+          REVISIÓN MANUAL
+        </span>
+
+        <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+          La auditoría automática no pudo procesar el documento. Se requiere
+          una revisión manual.
+        </p>
+      </div>
+    );
+  }
+
+  const suggestion = audit.sugerencia;
+
+  const styles = {
+    APROBAR: "bg-[#E8F7F3] text-[#187968]",
+    REVISION_MANUAL: "bg-orange-50 text-orange-600",
+    RECHAZAR: "bg-red-50 text-red-600",
+  };
+
+  const labels = {
+    APROBAR: "APROBAR",
+    REVISION_MANUAL: "REVISAR",
+    RECHAZAR: "RECHAZAR",
+  };
+
+  const badgeStyle =
+    styles[suggestion] || "bg-slate-100 text-slate-600";
+
+  const badgeLabel = labels[suggestion] || "REVISAR";
+
+  return (
+    <div className="space-y-2 min-w-[180px]">
+      <span
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${badgeStyle}`}
+      >
+        <BrainCircuit size={13} />
+        {badgeLabel}
+      </span>
+
+      {audit.score_confianza != null && (
+        <p className="text-xs font-semibold text-slate-600">
+          Confianza: {audit.score_confianza}%
+        </p>
+      )}
+
+      {audit.justificacion && (
+        <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+          {audit.justificacion}
+        </p>
+      )}
+
+      {audit.razon_social_detectada && (
+        <p className="text-xs text-slate-500">
+          <span className="font-semibold">Razón social:</span>{" "}
+          {audit.razon_social_detectada}
+        </p>
+      )}
+
+      {audit.condicion_iva_detectada && (
+        <p className="text-xs text-slate-500">
+          <span className="font-semibold">Condición IVA:</span>{" "}
+          {audit.condicion_iva_detectada}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function WholesaleManagement() {
   const [users, setUsers] = useState([]);
@@ -127,6 +204,10 @@ function WholesaleManagement() {
 
   const wholesaleCount = users.filter(
     (user) => Boolean(user.cuit)
+  ).length;
+
+  const auditedCount = users.filter(
+    (user) => Boolean(user.cuit && user.auditoria_ia?.procesado)
   ).length;
 
   // Búsqueda y filtros.
@@ -289,8 +370,6 @@ function WholesaleManagement() {
     <main className="min-h-screen bg-[#F4F0E8] px-5 py-8 md:px-8 md:py-12">
       <div className="max-w-7xl mx-auto">
 
-        
-
         <div className="mb-9">
           <Link
             to="/"
@@ -310,7 +389,8 @@ function WholesaleManagement() {
 
           <p className="text-slate-500 mt-3 max-w-2xl">
             Administrá las cuentas minoristas y mayoristas de Acordes Mayorista.
-            Revisá solicitudes, creá usuarios y modificá sus datos.
+            Revisá solicitudes, consultá auditorías de inteligencia artificial,
+            creá usuarios y modificá sus datos.
           </p>
         </div>
 
@@ -488,6 +568,7 @@ function WholesaleManagement() {
                       <th className="px-6 py-5">CUIT</th>
                       <th className="px-6 py-5">Tipo</th>
                       <th className="px-6 py-5">Estado</th>
+                      <th className="px-6 py-5">Auditoría IA</th>
                       <th className="px-6 py-5">Acciones</th>
                     </tr>
                   </thead>
@@ -523,6 +604,16 @@ function WholesaleManagement() {
                             <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold ${getStatusStyle(user.estado_mayorista)}`}>
                               {user.estado_mayorista || "ACTIVO"}
                             </span>
+                          </td>
+
+                          <td className="px-6 py-5">
+                            {isWholesale ? (
+                              <AuditInfo audit={user.auditoria_ia} />
+                            ) : (
+                              <span className="text-xs text-slate-400">
+                                No corresponde
+                              </span>
+                            )}
                           </td>
 
                           <td className="px-6 py-5">
@@ -604,6 +695,16 @@ function WholesaleManagement() {
                         </span>
                       </div>
 
+                      {isWholesale && (
+                        <div className="mt-4 p-4 bg-[#FAF9F6] rounded-xl">
+                          <p className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2">
+                            <BrainCircuit size={15} />
+                            AUDITORÍA DE INTELIGENCIA ARTIFICIAL
+                          </p>
+                          <AuditInfo audit={user.auditoria_ia} />
+                        </div>
+                      )}
+
                       <div className="flex flex-wrap gap-2 mt-5">
                         {user.estado_mayorista === "PENDIENTE" && (
                           <>
@@ -658,7 +759,7 @@ function WholesaleManagement() {
         {/* Resumen de solicitudes */}
         <section className="mt-6 bg-white border border-[#E8E3DA] rounded-3xl p-6">
           <div className="flex items-center gap-3 mb-5">
-            <Clock size={22} className="text-[#F07858}" />
+            <Clock size={22} className="text-[#F07858]" />
             <h2 className="text-lg font-extrabold text-[#183B4E]">
               Estado de solicitudes mayoristas
             </h2>
@@ -678,6 +779,50 @@ function WholesaleManagement() {
             <div className="bg-red-50 rounded-xl p-4">
               <p className="text-sm text-red-600 font-semibold">Rechazadas</p>
               <p className="text-2xl font-extrabold text-[#183B4E] mt-1">{rejectedCount}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Resumen de auditoría IA */}
+        <section className="mt-6 bg-white border border-[#E8E3DA] rounded-3xl p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-11 h-11 rounded-xl bg-[#E8F7F3] flex items-center justify-center">
+              <BrainCircuit size={22} className="text-[#20B8A5]" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-extrabold text-[#183B4E]">
+                Auditoría de CUIT con IA
+              </h2>
+              <p className="text-sm text-slate-500">
+                Estado de los análisis automáticos de documentación.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-[#E8F7F3] rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <FileCheck size={18} className="text-[#187968]" />
+                <p className="text-sm text-[#187968] font-semibold">
+                  Documentos analizados
+                </p>
+              </div>
+              <p className="text-2xl font-extrabold text-[#183B4E] mt-2">
+                {auditedCount}
+              </p>
+            </div>
+
+            <div className="bg-orange-50 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <Clock size={18} className="text-orange-600" />
+                <p className="text-sm text-orange-600 font-semibold">
+                  Pendientes de análisis
+                </p>
+              </div>
+              <p className="text-2xl font-extrabold text-[#183B4E] mt-2">
+                {Math.max(0, wholesaleCount - auditedCount)}
+              </p>
             </div>
           </div>
         </section>
@@ -814,7 +959,9 @@ function WholesaleManagement() {
             </p>
             <p className="text-sm text-slate-600 mt-1 leading-relaxed">
               Las solicitudes mayoristas deben ser aprobadas por un administrador.
-              Las cuentas minoristas se encuentran habilitadas para operar.
+              La auditoría de IA funciona como una recomendación y no reemplaza
+              la revisión y decisión del administrador. Las cuentas minoristas
+              se encuentran habilitadas para operar.
             </p>
           </div>
         </div>
