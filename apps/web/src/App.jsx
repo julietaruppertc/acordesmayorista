@@ -7,6 +7,7 @@ import {
   Navigate,
   Outlet,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 
 import Login from "./views/Login.jsx";
-import Register from "./views/Register.jsx";
+
 import Catalog from "./views/Catalog.jsx";
 import Cart from "./views/Cart.jsx";
 import Checkout from "./views/Checkout.jsx";
@@ -44,8 +45,12 @@ function Navbar() {
   const { logout } = useAuth();
   const { totalItems } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Ocultar enlaces de autenticación en Login/Registro
+  const isAuthPage = location.pathname === "/login";
 
   const handleLogout = () => {
     logout();
@@ -58,7 +63,6 @@ function Navbar() {
   return (
     <header className="bg-white border-b border-[#E8E3DA] sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
-
         <div className="flex items-center justify-between gap-4">
 
           {/* LOGO */}
@@ -126,21 +130,23 @@ function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="hover:text-[#20B8A5] transition"
-                >
-                  Iniciar sesión
-                </Link>
+              !isAuthPage && (
+                <>
+                  <Link
+                    to="/login"
+                    className="hover:text-[#20B8A5] transition"
+                  >
+                    Iniciar sesión
+                  </Link>
 
-                <Link
-                  to="/registro"
-                  className="hover:text-[#20B8A5] transition"
-                >
-                  Registrarse
-                </Link>
-              </>
+                  <Link
+                    to="/login"
+                    className="hover:text-[#20B8A5] transition"
+                  >
+                    Registrarse
+                  </Link>
+                </>
+              )
             )}
           </nav>
 
@@ -253,27 +259,28 @@ function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={closeMenu}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F7F3]"
-                >
-                  <UserRound size={18} />
-                  Iniciar sesión
-                </Link>
+              !isAuthPage && (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={closeMenu}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F7F3]"
+                  >
+                    <UserRound size={18} />
+                    Iniciar sesión
+                  </Link>
 
-                <Link
-                  to="/registro"
-                  onClick={closeMenu}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F7F3]"
-                >
-                  <UserRound size={18} />
-                  Registrarse
-                </Link>
-              </>
+                  <Link
+                    to="/login"
+                    onClick={closeMenu}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F7F3]"
+                  >
+                    <UserRound size={18} />
+                    Registrarse
+                  </Link>
+                </>
+              )
             )}
-
           </nav>
         )}
       </div>
@@ -295,16 +302,13 @@ function Layout() {
 function Home() {
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-10">
-
       <section id="catalogo" className="scroll-mt-28">
         <Catalog />
       </section>
 
       {/* PIE DE PÁGINA */}
       <footer className="mt-20 bg-[#183B4E] rounded-3xl p-8 md:p-10 text-white">
-
         <div className="flex flex-col md:flex-row justify-between gap-8">
-
           <div>
             <BrandLogo light />
 
@@ -322,13 +326,11 @@ function Home() {
             <p>Instrumentos musicales</p>
             <p className="mt-2">Tu música, tu identidad.</p>
           </div>
-
         </div>
 
         <div className="border-t border-white/15 mt-8 pt-6 text-xs text-[#B9D0D6]">
           © {new Date().getFullYear()} Acordes Mayorista. Todos los derechos reservados.
         </div>
-
       </footer>
     </main>
   );
@@ -338,13 +340,10 @@ function Home() {
 function App() {
   return (
     <Routes>
-
       {/* TODAS LAS PÁGINAS COMPARTEN EL MENÚ */}
       <Route element={<Layout />}>
-
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<Register />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/carrito" element={<Cart />} />
@@ -365,11 +364,9 @@ function App() {
           <Route path="/operador/usuarios" element={<WholesaleManagement />} />
           <Route path="/admin/pedidos" element={<OrderManagement />} />
         </Route>
-
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }
