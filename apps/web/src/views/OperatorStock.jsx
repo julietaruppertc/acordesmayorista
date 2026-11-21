@@ -80,76 +80,90 @@ function OperatorStock() {
     loadProducts();
   }, []);
 
-  const updateStock = async (product, amount) => {
-    if (usingMocks) return;
+ 
+const updateStock = async (product, amount) => {
+  if (usingMocks) return;
 
-    const currentStock = product.onHand;
-    if (!Number.isInteger(currentStock) || currentStock < 0) {
-      showMessage("El backend debe informar el stock f\u00edsico para poder ajustarlo.", "error");
-      return;
-    }
+  const currentStock = Number(product.onHand);
 
-    const newStock = currentStock + amount;
+  if (!Number.isInteger(currentStock) || currentStock < 0) {
+    showMessage(
+      "El backend debe informar el stock físico para poder ajustarlo.",
+      "error"
+    );
+    return;
+  }
 
-    if (newStock < 0) return;
+  const newStock = currentStock + amount;
 
-    if (!product.id || !Number.isInteger(product.version)) {
-      showMessage(
-        "No se puede actualizar el producto porque falta su identificador o versión.",
-        "error"
-      );
-      return;
-    }
+  if (newStock < 0) {
+    showMessage(
+      "No podés quitar más unidades de las que hay disponibles.",
+      "error"
+    );
+    return;
+  }
 
-    try {
-      setSavingProduct(product.id);
-      setMessage("");
+  if (!product.id || !Number.isInteger(product.version)) {
+    showMessage(
+      "No se puede actualizar el producto porque falta su identificador o versión.",
+      "error"
+    );
+    return;
+  }
 
-      await updateProductStock(
-        product.id,
-        newStock,
-        product.version
-      );
+  try {
+    setSavingProduct(product.id);
+    setMessage("");
 
-      // Reiniciar el campo solamente después de guardar correctamente.
-      if (amount > 0) {
-        setStockAmounts((current) => ({
-          ...current,
-          [product.id]: "1",
-        }));
-      }
+    await updateProductStock(
+      product.id,
+      newStock,
+      product.version
+    );
+
+    setStockAmounts((current) => ({
+      ...current,
+      [product.id]: "1",
+    }));
+
+    await loadProducts();
+
+    showMessage(
+      amount > 0
+        ? "Stock incrementado correctamente."
+        : "Stock disminuido correctamente.",
+      "success"
+    );
+  } catch (error) {
+    console.error("Error al actualizar el stock:", error);
+
+    if (error.response?.status === 409) {
+      const errorData = error.response.data;
+      const currentVersion = errorData?.details?.currentVersion;
 
       await loadProducts();
 
-      showMessage("Stock actualizado correctamente.", "success");
-    } catch (error) {
-      console.error("Error al actualizar el stock:", error);
+      showMessage(
+        `Conflicto 409: otro operador modificó el stock. Se actualizó la información.${
+          currentVersion !== undefined
+            ? ` Versión actual: ${currentVersion}.`
+            : ""
+        }`,
+        "error"
+      );
+    } else {
+      const errorMessage =
+        error.response?.data?.message ||
+        "No se pudo actualizar el stock. Intentá nuevamente.";
 
-      if (error.response?.status === 409) {
-        const errorData = error.response.data;
-        const currentVersion = errorData?.details?.currentVersion;
-
-        await loadProducts();
-
-        showMessage(
-          `Conflicto 409: otro operador modificó el stock. Se actualizó la información.${
-            currentVersion !== undefined
-              ? ` Versión actual: ${currentVersion}.`
-              : ""
-          }`,
-          "error"
-        );
-      } else {
-        const errorMessage =
-          error.response?.data?.message ||
-          "No se pudo actualizar el stock. Intentá nuevamente.";
-
-        showMessage(errorMessage, "error");
-      }
-    } finally {
-      setSavingProduct(null);
+      showMessage(errorMessage, "error");
     }
-  };
+  } finally {
+    setSavingProduct(null);
+  }
+};
+
 
   const totalProducts = products.length;
 

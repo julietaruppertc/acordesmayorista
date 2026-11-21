@@ -29,10 +29,10 @@ function Login() {
     try {
       const user = await login({ email, password });
 
-console.log("Usuario autenticado:", user);
-console.log("Rol del usuario:", user?.rol);
+      console.log("Usuario autenticado:", user);
+      console.log("Rol del usuario:", user?.rol);
 
-navigate("/");
+      navigate("/");
     } catch {
       // El error se muestra desde useAuth.
     }
@@ -40,8 +40,7 @@ navigate("/");
 
   return (
     <div className="min-h-screen bg-[#F4F0E8] flex items-center justify-center p-4 md:p-8">
-
-      <div className="w-full max-w-6xl min-h-[650px] bg-white rounded-[32px] shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+      <div className="w-full max-w-6xl min-h-[650px] md:h-[650px] bg-white rounded-[32px] shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
 
         {/* PANEL IZQUIERDO */}
         <section className="relative bg-[#183B4E] p-9 md:p-14 flex flex-col justify-between overflow-hidden">
@@ -94,7 +93,7 @@ navigate("/");
         </section>
 
         {/* PANEL DERECHO */}
-        <section className="p-8 md:p-14 flex flex-col justify-center">
+        <section className="p-8 md:p-14 flex flex-col justify-center overflow-y-auto">
 
           <div className="max-w-md w-full mx-auto">
 
@@ -135,7 +134,7 @@ navigate("/");
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="correo@ejemplo.com"
-                    className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-4 text-sm text-[#183B4E]"
+                    className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-4 text-sm text-[#183B4E] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
                   />
                 </div>
               </div>
@@ -157,7 +156,7 @@ navigate("/");
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Tu contraseña"
-                    className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-12 text-sm text-[#183B4E]"
+                    className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-12 text-sm text-[#183B4E] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
                   />
 
                   <button
@@ -210,7 +209,6 @@ navigate("/");
 
           </div>
         </section>
-
       </div>
     </div>
   );

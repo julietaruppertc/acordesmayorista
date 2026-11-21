@@ -13,6 +13,7 @@ import {
   UserRound,
   Store,
 } from "lucide-react";
+
 import { useAuth } from "../hooks/useAuth";
 import BrandLogo from "../components/BrandLogo";
 
@@ -65,78 +66,76 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F0E8] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-[#F4F0E8] flex items-center justify-center p-4 md:p-8">
 
-      {/* Panel izquierdo */}
-      <div className="hidden lg:flex lg:w-[42%] max-w-[520px] min-h-[650px] rounded-[28px] bg-[#183B4E] relative overflow-hidden flex-col justify-between p-10 text-white">
+      {/* MISMO CONTENEDOR EXTERIOR QUE LOGIN */}
+      <div className="w-full max-w-6xl min-h-[650px] md:h-[650px] bg-white rounded-[32px] shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
 
-        <div className="absolute -top-24 -right-20 w-80 h-80 bg-[#20B8A5] opacity-20 rounded-full" />
-        <div className="absolute -bottom-32 -left-20 w-96 h-96 bg-[#F07858] opacity-20 rounded-full" />
+        {/* PANEL IZQUIERDO */}
+        <section className="relative bg-[#183B4E] p-9 md:p-14 flex flex-col justify-between overflow-hidden">
 
-        <div className="relative z-10">
-          <BrandLogo light />
-        </div>
+          <div className="absolute w-80 h-80 rounded-full bg-[#20B8A5]/10 -top-32 -right-32" />
+          <div className="absolute w-72 h-72 rounded-full bg-[#F07858]/10 -bottom-32 -left-28" />
 
-        <div className="relative z-10 max-w-lg">
-          <div className="w-16 h-16 rounded-2xl bg-[#20B8A5] flex items-center justify-center mb-8">
-            <Music2 size={34} className="text-[#183B4E]" />
+          <div className="relative z-10">
+            <BrandLogo light />
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-tight mb-6">
-            Encontrá tu ritmo.
-            <span className="block text-[#20B8A5]">
-              Nosotros ponemos los acordes.
-            </span>
-          </h1>
+          <div className="relative z-10 my-12">
+            <div className="w-16 h-16 rounded-2xl bg-[#20B8A5] flex items-center justify-center mb-8">
+              <Music2 size={34} className="text-[#183B4E]" />
+            </div>
 
-          <p className="text-base text-[#D8F5EF] leading-relaxed">
-            Creá tu cuenta y descubrí todo lo que Acordes Mayorista tiene
-            preparado para vos.
-          </p>
-        </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-6">
+              Encontrá tu ritmo.
+              <span className="block text-[#20B8A5]">
+                Nosotros ponemos los acordes.
+              </span>
+            </h1>
 
-        <div className="relative z-10">
-          <p className="text-sm text-[#D8F5EF]">
-            Instrumentos, sonido y accesorios para todos los músicos.
-          </p>
-        </div>
-      </div>
-
-      {/* Panel derecho */}
-      <div className="w-full lg:w-[42%] max-w-[520px] flex items-center justify-center px-2 py-4">
-
-        <div className="w-full max-w-md">
-
-          <div className="lg:hidden mb-7">
-            <BrandLogo />
+            <p className="text-base text-[#D8F5EF] leading-relaxed max-w-md">
+              Creá tu cuenta y descubrí todo lo que Acordes Mayorista tiene
+              preparado para vos.
+            </p>
           </div>
 
-          <div className="bg-white rounded-[28px] shadow-xl shadow-[#183B4E]/10 p-7 sm:p-9">
+          <p className="relative z-10 text-xs text-[#9BB7C0]">
+            © {new Date().getFullYear()} Acordes Mayorista
+          </p>
+        </section>
+
+        {/* PANEL DERECHO */}
+        <section className="p-8 md:p-10 flex flex-col justify-center overflow-y-auto min-h-0">
+
+          <div className="w-full max-w-md mx-auto">
 
             <div className="mb-7">
-              <span className="inline-block bg-[#E8F7F3] text-[#168F80] text-xs font-bold tracking-wider uppercase px-3 py-2 rounded-full mb-4">
-                Unite a nuestra comunidad
-              </span>
+              <div className="w-12 h-12 bg-[#E8F7F3] rounded-2xl flex items-center justify-center mb-6">
+                <Music2 size={25} className="text-[#20B8A5]" />
+              </div>
 
-              <h2 className="text-3xl font-extrabold text-[#183B4E]">
+              <p className="text-xs uppercase tracking-[0.2em] font-extrabold text-[#20B8A5]">
+                Unite a nuestra comunidad
+              </p>
+
+              <h2 className="text-3xl font-extrabold text-[#183B4E] mt-2">
                 Crear una cuenta
               </h2>
 
-              <p className="text-[#71818A] mt-2">
+              <p className="text-[#71818A] mt-3">
                 Completá tus datos para comenzar.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* Tipo de cuenta */}
+              {/* TIPO DE CUENTA */}
               <div>
                 <label className="block text-sm font-bold text-[#183B4E] mb-2">
                   Tipo de cuenta
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
-
                   <button
                     type="button"
                     onClick={() => {
@@ -172,11 +171,10 @@ function Register() {
                     <Store size={18} />
                     Mayorista
                   </button>
-
                 </div>
               </div>
 
-              {/* Correo electrónico */}
+              {/* CORREO ELECTRÓNICO */}
               <div>
                 <label className="block text-sm font-bold text-[#183B4E] mb-2">
                   Correo electrónico
@@ -184,7 +182,7 @@ function Register() {
 
                 <div className="relative">
                   <Mail
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#91A0A7]"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#20B8A5]"
                     size={19}
                   />
 
@@ -194,12 +192,12 @@ function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="correo@ejemplo.com"
-                    className="w-full border border-[#E8E3DA] rounded-xl py-3.5 pl-12 pr-4 text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
+                    className="w-full border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-4 text-sm text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
                   />
                 </div>
               </div>
 
-              {/* Contraseña */}
+              {/* CONTRASEÑA */}
               <div>
                 <label className="block text-sm font-bold text-[#183B4E] mb-2">
                   Contraseña
@@ -207,7 +205,7 @@ function Register() {
 
                 <div className="relative">
                   <Lock
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#91A0A7]"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#20B8A5]"
                     size={19}
                   />
 
@@ -218,7 +216,7 @@ function Register() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 8 caracteres"
-                    className="w-full border border-[#E8E3DA] rounded-xl py-3.5 pl-12 pr-12 text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
+                    className="w-full border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-12 text-sm text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
                   />
 
                   <button
@@ -232,7 +230,7 @@ function Register() {
                 </div>
               </div>
 
-              {/* CUIT mayorista */}
+              {/* CUIT MAYORISTA */}
               {isWholesale && (
                 <div>
                   <label className="block text-sm font-bold text-[#183B4E] mb-2">
@@ -241,7 +239,7 @@ function Register() {
 
                   <div className="relative">
                     <FileText
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-[#91A0A7]"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-[#20B8A5]"
                       size={19}
                     />
 
@@ -255,7 +253,7 @@ function Register() {
                         setCuit(e.target.value.replace(/\D/g, "").slice(0, 11))
                       }
                       placeholder="Ej: 20381234564"
-                      className="w-full border border-[#E8E3DA] rounded-xl py-3.5 pl-12 pr-4 text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
+                      className="w-full border border-[#E8E3DA] rounded-xl py-4 pl-12 pr-4 text-sm text-[#183B4E] bg-[#FAF9F6] outline-none focus:border-[#20B8A5] focus:ring-4 focus:ring-[#20B8A5]/10 transition"
                     />
                   </div>
 
@@ -275,9 +273,9 @@ function Register() {
                 </div>
               )}
 
-              {/* Mensajes */}
+              {/* MENSAJES */}
               {(error || validationError) && (
-                <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded-xl text-sm">
+                <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-xl text-sm">
                   {validationError || error}
                 </div>
               )}
@@ -297,7 +295,7 @@ function Register() {
                 </div>
               )}
 
-              {/* Botón */}
+              {/* BOTÓN */}
               <button
                 type="submit"
                 disabled={loading || !!success}
@@ -309,29 +307,31 @@ function Register() {
 
             </form>
 
-            <div className="border-t border-[#F0EDE7] mt-7 pt-6">
-              <p className="text-center text-sm text-[#71818A]">
-                ¿Ya tenés una cuenta?{" "}
-                <Link
-                  to="/login"
-                  className="text-[#168F80] font-bold hover:text-[#183B4E] transition"
-                >
-                  Iniciá sesión
-                </Link>
+            <div className="mt-9 text-center">
+              <p className="text-sm text-slate-500">
+                ¿Ya tenés una cuenta?
               </p>
+
+              <Link
+                to="/login"
+                className="inline-block mt-2 text-[#168F80] font-extrabold hover:text-[#183B4E]"
+              >
+                Iniciá sesión
+              </Link>
             </div>
 
+            <Link
+              to="/"
+              className="block text-center text-sm text-slate-400 mt-8 hover:text-[#183B4E]"
+            >
+              Volver al inicio
+            </Link>
+
           </div>
-
-          <p className="text-center text-xs text-[#91A0A7] mt-6">
-            © {new Date().getFullYear()} Acordes Mayorista
-          </p>
-
-        </div>
+        </section>
       </div>
     </div>
   );
 }
 
 export default Register;
-

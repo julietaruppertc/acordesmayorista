@@ -8,10 +8,45 @@ import {
   CheckCircle,
   AlertCircle,
   X,
+  ArrowDownWideNarrow,
 } from "lucide-react";
 
 import { useProducts } from "../hooks/useProducts";
 import { useCart } from "../context/CartContext";
+
+const categoryCards = [
+  {
+    name: "Guitarras",
+    image:
+      "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Teclados",
+    image:
+      "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Percusión",
+    image:
+      "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Cuerdas",
+    image:
+      "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Vientos",
+    image:
+      "https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    name: "Audio",
+    label: "Audio y accesorios",
+    image:
+      "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=85",
+  },
+];
 
 function Catalog() {
   const { products, loading, error } = useProducts();
@@ -20,18 +55,11 @@ function Catalog() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
   const [availability, setAvailability] = useState("Todos");
-
+  const [sortPrice, setSortPrice] = useState("default");
   const [notification, setNotification] = useState(null);
 
-  const categories = [
-    "Todas",
-    ...new Set(
-      products.map((product) => product.category).filter(Boolean)
-    ),
-  ];
-
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    let result = products.filter((product) => {
       const matchesSearch =
         product.name?.toLowerCase().includes(search.toLowerCase()) ||
         product.description?.toLowerCase().includes(search.toLowerCase());
@@ -50,7 +78,21 @@ function Catalog() {
 
       return matchesSearch && matchesCategory && matchesAvailability;
     });
-  }, [products, search, category, availability]);
+
+    if (sortPrice === "menor") {
+      result = [...result].sort(
+        (a, b) => Number(a.price) - Number(b.price)
+      );
+    }
+
+    if (sortPrice === "mayor") {
+      result = [...result].sort(
+        (a, b) => Number(b.price) - Number(a.price)
+      );
+    }
+
+    return result;
+  }, [products, search, category, availability, sortPrice]);
 
   useEffect(() => {
     if (!notification) return;
@@ -84,9 +126,101 @@ function Catalog() {
     });
   };
 
+  const handleCategory = (selectedCategory) => {
+    setCategory(selectedCategory);
+
+    setTimeout(() => {
+      document.getElementById("productos")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategory("Todas");
+    setAvailability("Todos");
+    setSortPrice("default");
+  };
+
+  const hasFilters =
+    search !== "" ||
+    category !== "Todas" ||
+    availability !== "Todos" ||
+    sortPrice !== "default";
+
   return (
     <>
       <section>
+
+        {/* ENCABEZADO DEL CATÁLOGO */}
+        <div className="mb-9">
+          
+
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#183B4E] mt-2">
+            Instrumentos musicales
+          </h1>
+
+          <p className="text-slate-500 mt-3 max-w-2xl">
+            Descubrí nuestra selección de instrumentos, accesorios
+            y equipamiento musical para encontrar tu próximo sonido.
+          </p>
+        </div>
+
+        {/* CATEGORÍAS VISUALES */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-[#183B4E]">
+                Explorá por categoría
+              </h2>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Elegí lo que estás buscando.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+            {categoryCards.map((item) => (
+              <button
+                key={item.name}
+                type="button"
+                onClick={() => handleCategory(item.name)}
+                aria-pressed={category === item.name}
+                className={`group relative h-40 sm:h-48 md:h-56 overflow-hidden rounded-2xl text-left border-2 transition-all duration-300 ${
+                  category === item.name
+                    ? "border-[#20B8A5] ring-2 ring-[#20B8A5]/20"
+                    : "border-transparent hover:border-[#20B8A5]"
+                }`}
+              >
+                <img
+                  src={item.image}
+                  alt={item.label || item.name}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-[#102D3B]/90 via-[#183B4E]/20 to-transparent" />
+
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <h3 className="text-white text-lg md:text-xl font-extrabold">
+                    {item.label || item.name}
+                  </h3>
+
+                  <span className="inline-flex items-center gap-2 text-[#73E0CF] text-xs md:text-sm font-bold mt-2">
+                    Ver productos
+                    <span className="transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* BUSCADOR Y FILTROS */}
         <div className="bg-white rounded-3xl border border-[#E8E3DA] p-5 md:p-7 mb-8 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
@@ -94,13 +228,15 @@ function Catalog() {
               size={19}
               className="text-[#20B8A5]"
             />
+
             <h3 className="font-bold text-[#183B4E]">
-              Encontrá lo que buscás
+              
             </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative md:col-span-1">
+
+            <div className="relative">
               <Search
                 size={19}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -111,36 +247,65 @@ function Catalog() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar instrumentos..."
-                className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl pl-11 pr-4 py-3 text-sm text-[#183B4E]"
+                className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl pl-11 pr-4 py-3 text-sm text-[#183B4E] outline-none focus:border-[#20B8A5]"
               />
             </div>
 
             <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl px-4 py-3 text-sm text-[#183B4E]"
-            >
-              {categories.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <select
               value={availability}
               onChange={(event) => setAvailability(event.target.value)}
-              className="bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl px-4 py-3 text-sm text-[#183B4E]"
+              className="bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl px-4 py-3 text-sm text-[#183B4E] outline-none focus:border-[#20B8A5]"
             >
               <option value="Todos">Todos los productos</option>
               <option value="Disponible">Disponibles</option>
               <option value="Sin stock">Sin stock</option>
             </select>
+
+            <div className="relative">
+              <ArrowDownWideNarrow
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+
+              <select
+                value={sortPrice}
+                onChange={(event) => setSortPrice(event.target.value)}
+                className="w-full bg-[#FAF9F6] border border-[#E8E3DA] rounded-xl pl-11 pr-4 py-3 text-sm text-[#183B4E] outline-none focus:border-[#20B8A5]"
+              >
+                <option value="default">Ordenar por precio</option>
+                <option value="menor">Menor a mayor</option>
+                <option value="mayor">Mayor a menor</option>
+              </select>
+            </div>
+
           </div>
+
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-sm font-bold text-[#F07858] hover:underline mt-4"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
 
         {/* RESULTADOS */}
-        <div className="flex items-center justify-between mb-6">
+        <div
+          id="productos"
+          className="scroll-mt-28 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6"
+        >
+          <div>
+            <p className="text-[#20B8A5] font-extrabold text-xs tracking-widest uppercase">
+              Nuestra selección
+            </p>
+
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[#183B4E] mt-1">
+              {category === "Todas" ? "Todos los productos" : category}
+            </h2>
+          </div>
+
           <p className="text-sm text-slate-500">
             {loading
               ? "Cargando productos..."
@@ -167,12 +332,24 @@ function Catalog() {
               size={42}
               className="mx-auto text-[#20B8A5]"
             />
+
             <h3 className="font-bold text-xl text-[#183B4E] mt-4">
               No encontramos productos
             </h3>
+
             <p className="text-slate-500 mt-2">
               Probá modificando tu búsqueda o los filtros.
             </p>
+
+            {category !== "Todas" && (
+              <button
+                type="button"
+                onClick={() => setCategory("Todas")}
+                className="mt-5 bg-[#20B8A5] text-[#183B4E] px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#48D2C0]"
+              >
+                Ver todos los productos
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -292,6 +469,7 @@ function Catalog() {
             <p className="font-extrabold text-[#137B6C]">
               ¡Agregado!
             </p>
+
             <p className="text-sm text-slate-600 mt-1 break-words">
               {notification.name} se agregó al carrito correctamente.
             </p>

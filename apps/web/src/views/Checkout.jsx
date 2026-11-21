@@ -17,7 +17,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import BrandLogo from "../components/BrandLogo";
+
 import { useCart } from "../context/CartContext";
 import { createOrder } from "../services/orderService";
 
@@ -160,19 +160,7 @@ function Checkout() {
 
   return (
     <main className="min-h-screen bg-[#F4F0E8]">
-      {/* ENCABEZADO */}
-      <header className="bg-white border-b border-[#E8E3DA]">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link to="/">
-            <BrandLogo />
-          </Link>
-
-          <div className="hidden sm:flex items-center gap-2 text-sm text-slate-500">
-            <ShieldCheck size={19} className="text-[#20B8A5]" />
-            Compra segura
-          </div>
-        </div>
-      </header>
+      
 
       <div className="max-w-7xl mx-auto px-6 py-10 md:py-14">
         {/* TÍTULO */}

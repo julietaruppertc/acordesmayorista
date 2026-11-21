@@ -54,7 +54,7 @@ services:
       GATEWAY_PORT: 4000
       AUTH_SERVICE_URL: http://auth-service:4001
       CORE_SERVICE_URL: http://core-service:4002
-      CORS_ORIGIN: http://localhost:3000
+      CORS_ORIGIN: http://localhost:5173
       PUBLIC_KEY_PATH: /app/shared/keys/public.pem
     ports:
       - "4000:4000"
