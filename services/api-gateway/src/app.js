@@ -42,18 +42,18 @@ function createApp({ authUrl, coreUrl, corePool, onCoreSelected, publicKey, cors
 }));
 
   const proxyOptions = (target, onUnavailable) => ({
-    target,
-    changeOrigin: true,
-    proxyTimeout: 10000,
-    timeout: 10000,
-    on: {
-      error(_error, _req, res) {
-        onUnavailable?.();
-        if (res.headersSent) return res.end();
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'UPSTREAM_UNAVAILABLE' }));
+      target,
+      changeOrigin: true,
+      proxyTimeout: 25000,
+      timeout: 25000,
+      on: {
+        error(_error, _req, res) {
+          onUnavailable?.();
+          if (res.headersSent) return res.end();
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'UPSTREAM_UNAVAILABLE' }));
+        }
       }
-    }
   });
   const authProxy = createProxyMiddleware(proxyOptions(authUrl));
   const coreProxy = corePool ? null : createProxyMiddleware(proxyOptions(coreUrl));

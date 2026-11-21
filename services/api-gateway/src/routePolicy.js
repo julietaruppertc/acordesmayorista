@@ -105,7 +105,25 @@ function routePolicy(method, pathname) {
     return { service: 'core', access: 'webhook' };
   }
 
+  // Aprobar o rechazar mayoristas
+  if (
+    method === 'PATCH' &&
+    /^\/auth\/users\/[^/]+\/approve-wholesale$/.test(pathname)
+  ) {
+    return { service: 'auth', access: 'roles', roles: ['admin'] };
+  }
+
+  // Re-ejecutar auditoría IA sobre constancia fiscal
+  if (
+    method === 'POST' &&
+    /^\/auth\/users\/[^/]+\/re-audit-cuit$/.test(pathname)
+  ) {
+    return { service: 'auth', access: 'roles', roles: ['admin'] };
+  }
+
+  
   return null;
+
 }
 
 module.exports = routePolicy;

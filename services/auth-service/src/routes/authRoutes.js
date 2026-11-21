@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -23,5 +22,11 @@ router.patch(
   authController.approveWholesale
 );
 
-module.exports = router;
+// Re-ejecutar auditoría IA sobre la constancia de un usuario mayorista
+router.post(
+  '/users/:id/re-audit-cuit',
+  requireAdmin,
+  authController.reAuditCuit
+);
 
+module.exports = router;

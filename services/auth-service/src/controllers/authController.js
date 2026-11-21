@@ -1,9 +1,10 @@
-
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { validateCuitModulo11 } = require('../utils/cuitValidator');
+const cuitAiAuditor = require('../services/cuitAiAuditor');
 
 // Cargar claves RSA
 const privateKeyPath = path.join(__dirname, '../../../../shared/keys/private.pem');
@@ -22,28 +23,47 @@ try {
 // 1. Registro de usuarios (RF-10 / US-01)
 exports.register = async (req, res) => {
   try {
-    const { email, password, cuit } = req.body;
+    const { email, password, cuit, constanciaBase64, constanciaMimeType } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
 
-    const existingUser = await User.findOne({ email });
+    let normalizedCuit = null;
+    if (cuit !== undefined && cuit !== null && String(cuit).trim() !== '') {
+      const validation = validateCuitModulo11(String(cuit).trim());
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.reason });
+      }
+      normalizedCuit = validation.normalized;
+    }
+
+    const existingUser = await User.findOne({ email: String(email).trim().toLowerCase() });
     if (existingUser) {
       return res.status(409).json({ error: 'El email ya se encuentra registrado' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Si envía CUIT, requiere validación de mayorista (RF-01)
-    const estadoMayorista = cuit ? 'PENDIENTE' : 'NO_APLICA';
+    // Si envía CUIT, requiere validación de mayorista (RF-01) - Human-in-the-Loop
+    const estadoMayorista = normalizedCuit ? 'PENDIENTE' : 'NO_APLICA';
+
+    let auditoriaIa = { procesado: false };
+    if (normalizedCuit && constanciaBase64 && constanciaMimeType) {
+      auditoriaIa = await cuitAiAuditor.auditCuitDocument({
+        declaredCuit: normalizedCuit,
+        constanciaBase64,
+        constanciaMimeType
+      });
+    }
 
     const user = new User({
       email,
       password: hashedPassword,
       rol: 'cliente',
-      cuit: cuit || null,
-      estado_mayorista: estadoMayorista
+      cuit: normalizedCuit,
+      estado_mayorista: estadoMayorista,
+      auditoria_ia: auditoriaIa
     });
 
     await user.save();
@@ -55,7 +75,8 @@ exports.register = async (req, res) => {
         email: user.email,
         rol: user.rol,
         cuit: user.cuit,
-        estado_mayorista: user.estado_mayorista
+        estado_mayorista: user.estado_mayorista,
+        auditoria_ia: user.auditoria_ia
       }
     });
   } catch (error) {
@@ -142,8 +163,6 @@ exports.getPublicKey = (req, res) => {
   res.send(publicKey);
 };
 
-
-
 // 5. Listar usuarios para el panel administrativo
 exports.getUsers = async (req, res) => {
   try {
@@ -180,6 +199,15 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: 'CUIT inv\u00e1lido' });
     }
 
+    let normalizedCuit = null;
+    if (cuit && cuit.trim()) {
+      const validation = validateCuitModulo11(cuit.trim());
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.reason });
+      }
+      normalizedCuit = validation.normalized;
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await User.findOne({
@@ -192,7 +220,6 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    const normalizedCuit = cuit?.trim() || null;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
@@ -274,17 +301,27 @@ exports.updateUser = async (req, res) => {
     }
 
     if (cuit !== undefined) {
-      const normalizedCuit = cuit?.trim() || null;
+      const rawCuit = cuit?.trim() || null;
 
-      if (!normalizedCuit) {
+      if (!rawCuit) {
         user.cuit = null;
         user.estado_mayorista = 'NO_APLICA';
+        user.auditoria_ia = { procesado: false };
       } else {
-        if (user.cuit !== normalizedCuit) {
-          user.estado_mayorista = 'PENDIENTE';
+        const validation = validateCuitModulo11(rawCuit);
+        if (!validation.valid) {
+          return res.status(400).json({ error: validation.reason });
         }
 
-        user.cuit = normalizedCuit;
+        const prevDigits = (user.cuit || '').replace(/[-\s]/g, '');
+        const nextDigits = rawCuit.replace(/[-\s]/g, '');
+
+        if (prevDigits !== nextDigits) {
+          user.estado_mayorista = 'PENDIENTE';
+          user.auditoria_ia = { procesado: false };
+        }
+
+        user.cuit = rawCuit;
       }
     }
 
@@ -332,6 +369,52 @@ exports.deleteUser = async (req, res) => {
 
     return res.status(200).json({
       message: 'Usuario eliminado correctamente',
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+  }
+};
+
+// 9. Re-auditar constancia fiscal con IA desde el panel administrativo
+exports.reAuditCuit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!/^[a-f0-9]{24}$/i.test(id)) {
+      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+    }
+
+    const { constanciaBase64, constanciaMimeType } = req.body;
+    if (!constanciaBase64 || !constanciaMimeType) {
+      return res.status(400).json({ error: 'Debe adjuntar constanciaBase64 y constanciaMimeType' });
+    }
+
+    const user = await User.findOne({ _id: id, rol: 'cliente' });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (!user.cuit) {
+      return res.status(400).json({ error: 'El usuario no tiene un CUIT asignado para auditar' });
+    }
+
+    const auditoriaIa = await cuitAiAuditor.auditCuitDocument({
+      declaredCuit: user.cuit,
+      constanciaBase64,
+      constanciaMimeType
+    });
+
+    user.auditoria_ia = auditoriaIa;
+    await user.save();
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
+    return res.status(200).json({
+      message: 'Auditoría de CUIT ejecutada',
+      user: {
+        ...safeUser,
+        id: user._id.toString()
+      }
     });
   } catch (error) {
     return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
