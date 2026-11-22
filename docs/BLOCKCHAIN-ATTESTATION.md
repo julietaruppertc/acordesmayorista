@@ -101,7 +101,14 @@ El inicializador conserva una clave existente o crea una nueva y muestra únicam
 
 Dirección pública creada para esta rama: `0x52C3914fF9559875962A3e4F510fCe58A6863D65`.
 
-Estado al 22/11/2026: el despliegue real está pendiente porque esa billetera todavía no posee Sepolia ETH. No existe aún una dirección de contrato que deba compartirse o configurar en otros entornos.
+Despliegue realizado el 22/11/2026 en Ethereum Sepolia (`chainId 11155111`):
+
+- contrato: `0x0840CB12A12BeB5a1F8613dD19764545753824f7`;
+- transacción de despliegue: `0xe9eff4b0d6922767feecc8f6078f6dcef38d91dff7f0b9e8c0e4267e3de756de`;
+- bloque de despliegue: `12191453`;
+- relayer: `0x52C3914fF9559875962A3e4F510fCe58A6863D65`.
+
+La dirección, la red, el bloque y las transacciones son datos públicos. La clave privada del relayer y el RPC permanecen únicamente en el `.env` ignorado.
 
 ## 7. Endpoint de auditoría
 
@@ -129,6 +136,23 @@ Entorno de base: proyecto Docker aislado `acordes-blockchain-paz`, no Supabase c
 
 El lint global del frontend ya fallaba en archivos ajenos a esta extensión (PropTypes, imports faltantes y variables sin usar). No se modificaron esos archivos para evitar mezclar responsabilidades; el detalle debe resolverse en la rama de frontend.
 
+### Evidencia real en Sepolia y Supabase
+
+El 22/11/2026 se ejecutó el recorrido real con Core y worker como procesos separados:
+
+- pedido: `6262a435-25eb-4ec8-91b1-451955ca56ad`;
+- total: `$2.500.000` (dos unidades del producto seleccionado);
+- pago simulado: aprobado mediante el webhook HMAC;
+- estado del pedido: `PAID`;
+- estado blockchain: `CONFIRMED`;
+- evento `ORDER_PAID`: `PROCESSED`, un intento y sin error;
+- evento `ATTEST_HIGH_VALUE`: `PROCESSED`, un intento y sin error;
+- hash de evidencia: `0x5e1cb17c6427bf31a03b95054f229c78af0c8f17ad2f97ffa89d0268b8251167`;
+- transacción de atestación: `0x813b27f0b63acae251efd6bf86b9e296847512a6164236ae52e2e1fc1767c64d`;
+- verificación del endpoint: `verified=true` y `verificationStatus=VERIFIED`.
+
+La migración `004` se aplicó en Supabase después de haber sido validada dos veces en PostgreSQL aislado. La prueba consumió stock real de demostración y Sepolia ETH de la billetera técnica; no se ejecutan suites destructivas contra Supabase.
+
 La auditoría del Core quedó sin vulnerabilidades después de actualizaciones compatibles. Hardhat conserva una alerta de desarrollo por su dependencia transitiva de Zod 3; no existe actualmente un parche compatible en la rama Hardhat 3. Hardhat no forma parte de la imagen de ejecución del Core.
 
 ## 9. Prueba de punta a punta
@@ -145,7 +169,7 @@ Una vez financiada la billetera y desplegado el contrato:
 8. consultar `/api/orders/:id/blockchain-proof`;
 9. abrir `explorerUrl` y contrastar la transacción.
 
-No ejecutar esta prueba en Supabase compartido hasta que el contrato esté desplegado y el equipo acuerde el entorno.
+La primera ejecución compartida ya fue realizada y documentada. Las repeticiones deben coordinarse porque crean un pedido/pago real de demostración, descuentan stock de Supabase y consumen una pequeña cantidad de Sepolia ETH. Las pruebas automáticas continúan usando PostgreSQL y blockchain locales, sin costo.
 
 ## 10. Integración del equipo
 

@@ -206,11 +206,11 @@ Worker reclama eventos `PENDING` mediante `FOR UPDATE SKIP LOCKED`, los cambia a
 | --- | --- |
 | orders.orders | PENDING_PAYMENT / PAID / PAYMENT_FAILED / EXPIRED / CANCELLED |
 | payments.payments | APPROVED / REJECTED |
-| mq.outbox | PENDING al encolar; PROCESSED al consumir |
+| mq.outbox | PENDING al encolar; PROCESSING al reclamar; PROCESSED al consumir; FAILED al agotar reintentos |
 
 Outbox PENDING no implica pedido pendiente. Consumo normal deja attempts=1, processed_at informado y last_error=null. No marcar PROCESSED con SQL ni disparar consumo desde navegador para ocultar ausencia del worker.
 
-Límites existentes: un rollback puede revertir también attempts; no hay garantía de tres fallos persistidos ni transición automática a FAILED implementada. El log ocurre antes de commit y podría repetirse si revierte. No afirmar entrega exactamente una vez a un proveedor externo.
+El worker persiste intentos fuera de la transacción del efecto externo, recupera leases abandonados y pasa a `FAILED` al agotar reintentos. La idempotencia del contrato evita duplicar una atestación, pero no se afirma entrega exactamente una vez para cualquier proveedor externo.
 
 Los Compose contemplan worker/expirador con restart: unless-stopped y sin puertos propios publicados. En test están en perfil automation para no consumir fixtures de suites. En Supabase procesan también eventos/pedidos antiguos elegibles; entender ese efecto antes de iniciar sobre datos compartidos.
 
@@ -218,7 +218,7 @@ Los Compose contemplan worker/expirador con restart: unless-stopped y sin puerto
 
 Tablas: catalog.categories/products, inventory.stock, orders.orders/order_items, payments.webhook_inbox/payments y mq.outbox. IDs del negocio UUID; user_id es identidad externa textual sin FK entre Mongo/PostgreSQL. Borrar una cuenta no elimina el pedido relacional.
 
-Migraciones: 001_initial_schema.sql, 002_database_security.sql y 003_product_images.sql. La segunda habilita RLS y revoca PUBLIC y, si existen, anon/authenticated. No hay políticas para acceso directo del navegador ni Supabase Auth reemplazando al Auth propio. Core usa conexión PostgreSQL privada, no las APIs públicas de tablas.
+Migraciones: `001_initial_schema.sql`, `002_database_security.sql`, `003_product_images.sql` y `004_blockchain_attestation.sql`. La segunda habilita RLS y revoca PUBLIC y, si existen, anon/authenticated. La cuarta agrega evidencia blockchain y lease del Outbox; fue validada de forma aislada y aplicada de manera idempotente en Supabase. No hay políticas para acceso directo del navegador ni Supabase Auth reemplazando al Auth propio. Core usa conexión PostgreSQL privada, no las APIs públicas de tablas.
 
 Los roles SQL restringidos svc_domain/svc_payments de DEC-08 del Plan no están creados por las migraciones. Los esquemas no acreditan aislamiento de credenciales por esos roles: diferencia pendiente de acordar con Paz.
 
@@ -342,7 +342,7 @@ Core usa `{error,message,details?,traceId}`: 400 VALIDATION_ERROR de Zod; 409 ST
 
 ## 14. Evidencia y límites
 
-Último lote funcional: 47 tests aprobados (Auth14/Gateway12/Core21). Las seis nuevas pruebas administrativas atraviesan webhook HTTP HMAC y PostgreSQL reales: aprobar/reintentar/decisión opuesta, rechazo, roles/validación, flag apagado, decisiones tardías y carrera con expiración. Se comprobó un evento/pago efectivo y traza hasta Outbox. No se ejecutaron contra Supabase.
+Último lote funcional: 57 tests aprobados de servicios (Auth17/Gateway13/Core27) y 4 del contrato Solidity. Las pruebas administrativas atraviesan webhook HTTP HMAC y PostgreSQL reales: aprobar/reintentar/decisión opuesta, rechazo, roles/validación, flag apagado, decisiones tardías y carrera con expiración. Blockchain agrega umbral alto, evento único, permisos de prueba, reintentos, lease e idempotencia. Las suites se ejecutaron en entornos aislados; la única prueba compartida fue el recorrido punta a punta documentado, no la suite destructiva.
 
 Frontend compilado y Edge visible con dos contextos: cliente envía, admin lista/resuelve, cliente observa PAID/PAYMENT_FAILED/EXPIRED, stock/eventos correctos y sin errores JavaScript en ese recorrido. Se comprobó expiresAt a 300 segundos; para probar el daemon se adelantó solo el vencimiento del fixture local y se observó su detección automática. No se presenta como espera cronometrada completa ni auditoría de todas las pantallas.
 
