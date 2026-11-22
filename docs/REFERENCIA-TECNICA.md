@@ -1,6 +1,6 @@
 # Referencia técnica de Acordes Mayorista
 
-Estado consolidado: 9 de noviembre de 2026. Leer junto con [README](../README.md). Este archivo reemplaza guías históricas, propuestas de proveedores y reportes de sesiones. Documenta lo implementado; los TP y el Plan Integral de Implementación y Trazabilidad siguen siendo las fuentes del alcance académico.
+Estado consolidado: 22 de noviembre de 2026. Leer junto con [README](../README.md). Este archivo reemplaza guías históricas, propuestas de proveedores y reportes de sesiones. Documenta lo implementado; los TP y el Plan Integral de Implementación y Trazabilidad siguen siendo las fuentes del alcance académico. La extensión de notarización se detalla en [BLOCKCHAIN-ATTESTATION](BLOCKCHAIN-ATTESTATION.md).
 
 Ante diferencias entre alcance, contrato y código, explicitar y acordar la resolución antes de modificar comportamiento. No inferir requisitos por recomendaciones de IA ni restaurar una rama antigua sobre cambios recientes. Los contratos JSON canónicos se conservan en shared/contracts/core.
 
@@ -79,6 +79,11 @@ Preparar services/auth-service/.env y services/core-service/.env con las plantil
 | Worker | OUTBOX_POLL_INTERVAL_SECONDS | 5 |
 | Worker | OUTBOX_MAX_ATTEMPTS | 3 en selección existente; ver límites de rollback |
 | Core | PAYMENT_WEBHOOK_SECRET | Privado, mínimo 32 caracteres |
+| Core/Worker | BLOCKCHAIN_ENABLED | false por defecto; habilita pedidos de alto valor |
+| Core/Worker | BLOCKCHAIN_RPC_URL | RPC de Sepolia validado por chainId |
+| Worker | RELAYER_PRIVATE_KEY | Secreto exclusivo de testnet; nunca llega al navegador |
+| Core/Worker | ATTESTATION_CONTRACT_ADDRESS | Contrato público de atestación |
+| Core/Worker | HIGH_VALUE_THRESHOLD_ARS | 2000000 por defecto |
 | Servidores | NODE_ENV | development en cloud-check, test en base aislada |
 | Frontend | VITE_API_URL | Gateway accesible desde ese navegador |
 | Frontend | VITE_DEMO_MODE | false para pruebas reales |
@@ -108,6 +113,7 @@ Pool opcional: DNS/URLs internas, round-robin y sondeo /ready del Core con compr
 | GET /api/products y /api/products/:id | Público; token enviado se verifica | Core |
 | POST /api/orders/checkout | cliente | Core |
 | GET /api/orders y /api/orders/:id | Todos los roles; cliente solo propios | Core |
+| GET /api/orders/:id/blockchain-proof | cliente propietario/admin | Core |
 | POST /api/orders/:id/resolve | admin; simulador habilitado | Core |
 | PATCH /api/operator/products/:productId/stock | operador/admin | Core |
 | POST /api/payments/webhook | Firma HMAC requerida | Core |
@@ -194,7 +200,7 @@ HTTP interno tiene timeout de cinco segundos. Un error de transporte no prueba q
 
 Expirador selecciona PENDING_PAYMENT con expires_at<=NOW, ordena por vencimiento y bloquea FOR UPDATE SKIP LOCKED hasta 50 por lote. Libera reservas, aumenta version, marca EXPIRED y encola en una transacción. Fallar una liberación revierte el lote. Revisa al iniciar y 30 segundos después de terminar la revisión anterior, sin superponerse. Backlog puede requerir varios ciclos. Recupera vencidos al reiniciar; cierre espera operación activa y cierra pool.
 
-Worker selecciona PENDING con attempts<OUTBOX_MAX_ATTEMPTS, ordena por creación y bloquea un evento FOR UPDATE SKIP LOCKED. Incrementa intentos, escribe `[NOTIFICACION] <evento> para orden <orderId> | TraceId: <traza>` y marca PROCESSED/processed_at en la transacción. Vacía disponibles al iniciar y sondea cada cinco segundos. No envía correos ni usa broker.
+Worker reclama eventos `PENDING` mediante `FOR UPDATE SKIP LOCKED`, los cambia a `PROCESSING` y libera la transacción antes de ejecutar efectos externos. El lease `locked_at` permite recuperar trabajo abandonado. Para eventos habituales escribe `[NOTIFICACION] <evento> para orden <orderId> | TraceId: <traza>`; para `ATTEST_HIGH_VALUE` invoca el relayer blockchain. Luego marca `PROCESSED` o reintenta hasta `OUTBOX_MAX_ATTEMPTS`. Vacía disponibles al iniciar y sondea cada cinco segundos. No envía correos ni usa broker.
 
 | Entidad | Estados relevantes |
 | --- | --- |

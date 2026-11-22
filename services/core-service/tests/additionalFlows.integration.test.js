@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const request = require('supertest');
 const app = require('../src/app');
+const env = require('../src/config/env');
 const { pool } = require('../src/config/database');
 const { expireBatch } = require('../src/jobs/expireReservations');
 const { processOne } = require('../src/workers/outboxWorker');
@@ -257,5 +258,26 @@ describe.sequential('Reglas adicionales del Core', () => {
     ]);
     expect(event.rows[0].status).toBe('PROCESSED');
     expect(Number(event.rows[0].attempts)).toBe(1);
+  });
+
+  it('recupera un evento PROCESSING cuyo lease venció sin consumir otro intento', async () => {
+    const insert = await pool.query(
+      `INSERT INTO mq.outbox
+         (event_type, payload, trace_id, status, attempts, locked_at)
+       VALUES ('TEST_NOTIFICATION', $1::jsonb, $2, 'PROCESSING', $3,
+               NOW() - (($4 + 1) * INTERVAL '1 second'))
+       RETURNING id`,
+      [JSON.stringify({ orderId: `stale-worker-order-${suffix}` }), `worker-${suffix}`,
+        env.OUTBOX_MAX_ATTEMPTS, env.OUTBOX_LOCK_TIMEOUT_SECONDS]
+    );
+
+    expect(await processOne()).toBe(true);
+    const event = await pool.query(
+      'SELECT status, attempts, locked_at FROM mq.outbox WHERE id=$1',
+      [insert.rows[0].id]
+    );
+    expect(event.rows[0].status).toBe('PROCESSED');
+    expect(Number(event.rows[0].attempts)).toBe(env.OUTBOX_MAX_ATTEMPTS);
+    expect(event.rows[0].locked_at).toBeNull();
   });
 });

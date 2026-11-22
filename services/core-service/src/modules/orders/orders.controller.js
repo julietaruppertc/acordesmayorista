@@ -45,4 +45,10 @@ async function resolve(req, res) {
   res.status(200).json({ data, traceId: req.context.traceId });
 }
 
-module.exports = { checkout, list, getById, resolve };
+async function getBlockchainProof(req, res) {
+  const id = idSchema.parse(req.params.id);
+  const data = await service.getBlockchainProof(id, req.context);
+  res.status(200).json({ data, traceId: req.context.traceId });
+}
+
+module.exports = { checkout, list, getById, resolve, getBlockchainProof };

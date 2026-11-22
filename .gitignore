@@ -3,6 +3,8 @@ node_modules/
 dist/
 build/
 .cache/
+services/core-service/blockchain/artifacts/
+services/core-service/blockchain/cache/
 
 # Entornos y credenciales
 .env

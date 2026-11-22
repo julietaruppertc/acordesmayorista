@@ -77,11 +77,25 @@ async function findOrderById(id) {
   return { ...orderResult.rows[0], items: itemResult.rows };
 }
 
+async function findBlockchainProofById(id) {
+  const { pool } = require('../../config/database');
+  const result = await pool.query(
+    `SELECT id, user_id, total, status,
+            blockchain_status, blockchain_tx_hash, blockchain_evidence_hash,
+            blockchain_network, blockchain_contract_address, blockchain_attested_at
+       FROM orders.orders
+      WHERE id = $1`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   findProductForCheckout,
   reserveStock,
   createOrder,
   createOrderItem,
   listOrders,
-  findOrderById
+  findOrderById,
+  findBlockchainProofById
 };

@@ -14,6 +14,9 @@ Esta guía explica el funcionamiento general. Para instalar, integrar, modificar
 - Gestión de pedidos: confirmar/rechazar mediante pago simulado, sin cobros reales.
 - Vencimiento automático de reservas y procesamiento de notificaciones simuladas.
 - Controles de concurrencia, pagos duplicados, permisos, trazabilidad y balanceo entre réplicas del Core.
+- Extensión opcional para notarizar en Sepolia los pedidos de alto valor mediante Transactional Outbox.
+
+La implementación blockchain está documentada en [Notarización blockchain](docs/BLOCKCHAIN-ATTESTATION.md). Permanece desactivada hasta que exista un contrato desplegado y secretos privados configurados; PostgreSQL sigue siendo la fuente de verdad.
 
 ## Cómo se conecta
 
@@ -28,6 +31,7 @@ flowchart TD
     EXP[Expirador automático] --> PG
     WORK[Worker de notificaciones] --> PG
     WORK --> LOG[Notificación simulada en consola]
+    WORK -->|Solo alto valor y función habilitada| EVM[Contrato de atestación en Sepolia]
 ```
 
 Gateway verifica identidad y permisos. Auth administra exclusivamente usuarios; Core administra los datos del negocio. El navegador no se conecta directamente a las bases.
@@ -119,6 +123,8 @@ Se ejecutaron 47 pruebas automáticas: 14 Auth, 12 Gateway y 21 Core. Cubren per
 El balanceo se demostró localmente con dos réplicas, caída y recuperación. No se acreditaron 250 usuarios, tiempos bajo esa carga ni disponibilidad del 99,5 %.
 
 Pendientes: historial completo del cliente, certificado de Supabase, roles SQL restringidos del Plan, lint global, compatibilidad más amplia y ensayo/evidencia de defensa. No hay pasarela real, correo externo ni tarifas/mínimos mayoristas implementados. El backend sigue local.
+
+La extensión blockchain requiere financiar una billetera exclusiva de Sepolia y desplegar el contrato antes de habilitarse. Ninguna clave privada debe versionarse ni enviarse al frontend.
 
 El alcance proviene de los TP y el Plan Integral de Implementación y Trazabilidad del equipo. Esta documentación describe implementación y límites; no declara cumplimiento de todos los requisitos originales.
 

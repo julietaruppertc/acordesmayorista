@@ -230,3 +230,21 @@ test('resolver pedidos exige admin y no acepta identidad falsificada', async () 
   assert.equal(result.body.userRole, 'admin');
   assert.equal(result.body.userId, '507f1f77bcf86cd799439011');
 });
+
+test('evidencia blockchain permite cliente y admin, pero no operador', async () => {
+  const path = '/api/orders/00000000-0000-4000-8000-000000000001/blockchain-proof';
+  assert.equal((await request(path)).status, 401);
+
+  for (const role of ['cliente', 'admin']) {
+    const result = await request(path, {
+      headers: { Authorization: `Bearer ${sign(role)}` }
+    });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.service, 'core');
+    assert.equal(result.body.userRole, role);
+  }
+
+  assert.equal((await request(path, {
+    headers: { Authorization: `Bearer ${sign('operador')}` }
+  })).status, 403);
+});
