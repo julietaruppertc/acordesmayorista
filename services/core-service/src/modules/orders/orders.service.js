@@ -2,6 +2,7 @@ const env = require('../../config/env');
 const { withTransaction } = require('../../config/database');
 const AppError = require('../../shared/AppError');
 const repository = require('./orders.repository');
+const blockchain = require('../blockchain/blockchain.service');
 
 function mapOrder(row) {
   return {
@@ -56,16 +57,24 @@ async function checkout({ userId, traceId, items }) {
       if (!reservation) {
         const available = Number(product.on_hand) - Number(product.reserved);
         if (available < item.quantity) {
-          throw new AppError(409, 'INSUFFICIENT_STOCK', `No hay stock suficiente para ${product.name}.`, {
-            productId: item.productId,
-            available
-          });
+          throw new AppError(
+            409,
+            'INSUFFICIENT_STOCK',
+            `No hay stock suficiente para ${product.name}.`,
+            {
+              productId: item.productId,
+              available
+            }
+          );
         }
         throw new AppError(
           409,
           'STOCK_VERSION_CONFLICT',
           `El stock de ${product.name} fue modificado por otra operación.`,
-          { productId: item.productId, currentVersion: Number(product.version) }
+          {
+            productId: item.productId,
+            currentVersion: Number(product.version)
+          }
         );
       }
 
@@ -80,7 +89,12 @@ async function checkout({ userId, traceId, items }) {
     }
 
     const expiresAt = new Date(Date.now() + env.RESERVATION_TTL_MINUTES * 60_000);
-    const order = await repository.createOrder(client, { userId, total, expiresAt, traceId });
+    const order = await repository.createOrder(client, {
+      userId,
+      total,
+      expiresAt,
+      traceId
+    });
 
     for (const item of orderItems) {
       await repository.createOrderItem(client, order.id, item);
@@ -106,4 +120,40 @@ async function getById(id, context) {
   return mapOrder(order);
 }
 
-module.exports = { checkout, list, getById };
+async function getBlockchainProof(id, context) {
+  const order = await repository.findBlockchainProofById(id);
+  if (!order) {
+    throw new AppError(404, 'ORDER_NOT_FOUND', 'El pedido solicitado no existe.');
+  }
+  if (context.userRole === 'cliente' && order.user_id !== context.userId) {
+    throw new AppError(403, 'FORBIDDEN', 'No puede consultar pedidos de otro usuario.');
+  }
+
+  let verified = null;
+  let verificationStatus = 'NOT_AVAILABLE';
+  if (order.blockchain_status === 'CONFIRMED' && order.blockchain_evidence_hash) {
+    try {
+      const result = await blockchain.verifyEvidenceHash(order.blockchain_evidence_hash);
+      verified = result.verified;
+      verificationStatus = result.reason || (verified ? 'VERIFIED' : 'MISMATCH');
+    } catch (_error) {
+      verificationStatus = 'NETWORK_UNAVAILABLE';
+    }
+  }
+
+  return {
+    orderId: order.id,
+    required: order.blockchain_status !== 'NOT_REQUIRED',
+    status: order.blockchain_status,
+    network: order.blockchain_network,
+    contractAddress: order.blockchain_contract_address,
+    evidenceHash: order.blockchain_evidence_hash,
+    transactionHash: order.blockchain_tx_hash,
+    attestedAt: order.blockchain_attested_at,
+    explorerUrl: blockchain.explorerUrl(order.blockchain_tx_hash),
+    verified,
+    verificationStatus
+  };
+}
+
+module.exports = { checkout, list, getById, getBlockchainProof };

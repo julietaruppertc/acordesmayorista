@@ -1,4 +1,7 @@
 node_modules
+blockchain/node_modules
+blockchain/artifacts
+blockchain/cache
 npm-debug.log*
 .env
 tests

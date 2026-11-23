@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "dotenv": "^18.0.0",
+    "ethers": "^6.15.0",
     "express": "^5.3.0",
     "helmet": "^8.1.0",
     "pg": "^8.16.0",

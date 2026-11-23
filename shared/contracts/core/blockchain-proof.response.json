@@ -1,0 +1,16 @@
+{
+  "data": {
+    "orderId": "00000000-0000-4000-8000-000000000000",
+    "required": true,
+    "status": "CONFIRMED",
+    "network": "sepolia",
+    "contractAddress": "0x0000000000000000000000000000000000000000",
+    "evidenceHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "transactionHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "attestedAt": "2026-11-22T00:00:00.000Z",
+    "explorerUrl": "https://sepolia.etherscan.io/tx/0x0000000000000000000000000000000000000000000000000000000000000000",
+    "verified": true,
+    "verificationStatus": "VERIFIED"
+  },
+  "traceId": "trace-example"
+}

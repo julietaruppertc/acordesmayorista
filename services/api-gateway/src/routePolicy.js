@@ -77,6 +77,10 @@ function routePolicy(method, pathname) {
     return { service: 'core', access: 'roles', roles: ['admin'] };
   }
 
+  if (method === 'GET' && /^\/api\/orders\/[^/]+\/blockchain-proof$/.test(pathname)) {
+    return { service: 'core', access: 'roles', roles: ['cliente', 'admin'] };
+  }
+
   // Pedidos
   if (
     method === 'GET' &&

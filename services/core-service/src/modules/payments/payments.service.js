@@ -1,4 +1,5 @@
 const { withTransaction } = require('../../config/database');
+const env = require('../../config/env');
 const AppError = require('../../shared/AppError');
 const outbox = require('../outbox/outbox.repository');
 
@@ -91,7 +92,10 @@ async function handleWebhook(input, traceId) {
     }
 
     if (order.status !== 'PENDING_PAYMENT') {
-      return { status: 'ignored', reason: `order_${order.status.toLowerCase()}` };
+      return {
+        status: 'ignored',
+        reason: `order_${order.status.toLowerCase()}`
+      };
     }
 
     if (new Date(order.expires_at).getTime() <= Date.now()) {
@@ -117,9 +121,26 @@ async function handleWebhook(input, traceId) {
       await recordPayment(client, input, order, 'APPROVED');
       await outbox.enqueue(client, {
         eventType: 'ORDER_PAID',
-        payload: { orderId: order.id, paymentId: input.paymentId, userId: order.user_id },
+        payload: {
+          orderId: order.id,
+          paymentId: input.paymentId,
+          userId: order.user_id
+        },
         traceId
       });
+      if (env.BLOCKCHAIN_ENABLED && Number(order.total) >= env.HIGH_VALUE_THRESHOLD_ARS) {
+        await client.query(
+          `UPDATE orders.orders
+              SET blockchain_status = 'PENDING', updated_at = NOW()
+            WHERE id = $1`,
+          [order.id]
+        );
+        await outbox.enqueue(client, {
+          eventType: 'ATTEST_HIGH_VALUE',
+          payload: { orderId: order.id, paymentId: input.paymentId },
+          traceId
+        });
+      }
       return { status: 'processed', orderStatus: 'PAID' };
     }
 
@@ -131,7 +152,11 @@ async function handleWebhook(input, traceId) {
     await recordPayment(client, input, order, 'REJECTED');
     await outbox.enqueue(client, {
       eventType: 'ORDER_PAYMENT_FAILED',
-      payload: { orderId: order.id, paymentId: input.paymentId, userId: order.user_id },
+      payload: {
+        orderId: order.id,
+        paymentId: input.paymentId,
+        userId: order.user_id
+      },
       traceId
     });
     return { status: 'processed', orderStatus: 'PAYMENT_FAILED' };
