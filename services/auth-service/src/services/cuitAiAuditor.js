@@ -51,15 +51,18 @@ const RESPONSE_SCHEMA = {
   ]
 };
 
-function isTransientError(error) {
+function isRetryableError(error) {
   const msg = String(error?.message || '');
   return (
     error?.status === 503 ||
     error?.status === 429 ||
+    error?.status === 404 ||
     msg.includes('503') ||
     msg.includes('429') ||
+    msg.includes('404') ||
     msg.includes('UNAVAILABLE') ||
-    msg.includes('RESOURCE_EXHAUSTED')
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('NOT_FOUND')
   );
 }
 
@@ -106,13 +109,13 @@ async function auditCuitDocument({ declaredCuit, constanciaBase64, constanciaMim
       'Devuelve APROBAR solo si el CUIT coincide, el documento es legible y la actividad es afín. Devuelve RECHAZAR si el CUIT no coincide o el documento es claramente falso/ajeno. Devuelve REVISION_MANUAL ante dudas.'
     ].join('\n');
 
-    const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const candidateModels = [...new Set([primaryModel, 'gemini-2.5-flash', 'gemini-3.8-flash'])];
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const retryDelaysMs = [2000, 4000, 6000];
 
     let response;
     let lastError;
 
-    for (const model of candidateModels) {
+    for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
       try {
         response = await ai.models.generateContent({
           model,
@@ -139,8 +142,10 @@ async function auditCuitDocument({ declaredCuit, constanciaBase64, constanciaMim
         break;
       } catch (err) {
         lastError = err;
-        if (!isTransientError(err)) throw err;
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (!isRetryableError(err) || attempt === retryDelaysMs.length) {
+          throw err;
+        }
+        await new Promise(resolve => setTimeout(resolve, retryDelaysMs[attempt]));
       }
     }
 
