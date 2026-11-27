@@ -1,3 +1,4 @@
+
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -30,35 +31,46 @@ exports.register = async (req, res) => {
     }
 
     let normalizedCuit = null;
+
     if (cuit !== undefined && cuit !== null && String(cuit).trim() !== '') {
       const validation = validateCuitModulo11(String(cuit).trim());
+
       if (!validation.valid) {
         return res.status(400).json({ error: validation.reason });
       }
+
       normalizedCuit = validation.normalized;
     }
 
-    const existingUser = await User.findOne({ email: String(email).trim().toLowerCase() });
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
     if (existingUser) {
-      return res.status(409).json({ error: 'El email ya se encuentra registrado' });
+      return res.status(409).json({
+        error: 'El email ya se encuentra registrado'
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Si envía CUIT, requiere validación de mayorista (RF-01) - Human-in-the-Loop
+    // Si envía CUIT, requiere validación de mayorista.
     const estadoMayorista = normalizedCuit ? 'PENDIENTE' : 'NO_APLICA';
 
-    let auditoriaIa = { procesado: false };
-    if (normalizedCuit && constanciaBase64 && constanciaMimeType) {
-      auditoriaIa = await cuitAiAuditor.auditCuitDocument({
-        declaredCuit: normalizedCuit,
-        constanciaBase64,
-        constanciaMimeType
-      });
-    }
+    const hasConstancia = Boolean(
+      normalizedCuit && constanciaBase64 && constanciaMimeType
+    );
+
+    // La auditoría comienza como pendiente.
+    const auditoriaIa = {
+      procesado: false,
+      justificacion: hasConstancia
+        ? 'Análisis documental en curso...'
+        : null
+    };
 
     const user = new User({
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       rol: 'cliente',
       cuit: normalizedCuit,
@@ -68,6 +80,7 @@ exports.register = async (req, res) => {
 
     await user.save();
 
+    // Responder al frontend sin esperar a Gemini.
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
       user: {
@@ -79,8 +92,33 @@ exports.register = async (req, res) => {
         auditoria_ia: user.auditoria_ia
       }
     });
+
+    // Ejecutar la auditoría en segundo plano.
+    if (hasConstancia) {
+      cuitAiAuditor
+        .auditCuitDocument({
+          declaredCuit: normalizedCuit,
+          constanciaBase64,
+          constanciaMimeType
+        })
+        .then(async (resultadoAuditoria) => {
+          await User.findByIdAndUpdate(user._id, {
+            $set: { auditoria_ia: resultadoAuditoria }
+          });
+        })
+        .catch((err) => {
+          console.error(
+            '[AUTH][AI-AUDITOR] Error en auditoría asíncrona:',
+            err.message
+          );
+        });
+    }
   } catch (error) {
-    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][REGISTER] Error:', error.message);
+
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Ocurrió un error interno.' });
+    }
   }
 };
 
@@ -90,16 +128,18 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Payload de identidad desacoplada con claims de rol y tier
+    // Payload de identidad desacoplada con claims de rol y tier.
     const payload = {
       sub: user._id.toString(),
       email: user.email,
@@ -108,7 +148,7 @@ exports.login = async (req, res) => {
       estado_mayorista: user.estado_mayorista
     };
 
-    // Firma con clave privada usando RS256
+    // Firma con clave privada usando RS256.
     const token = jwt.sign(payload, privateKey, {
       algorithm: 'RS256',
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
@@ -127,7 +167,8 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][LOGIN] Error:', error.message);
+    res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -135,7 +176,7 @@ exports.login = async (req, res) => {
 exports.approveWholesale = async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body; // 'APROBADO' o 'RECHAZADO'
+    const { estado } = req.body;
 
     if (!['APROBADO', 'RECHAZADO'].includes(estado)) {
       return res.status(400).json({ error: 'Estado mayorista inválido' });
@@ -153,7 +194,8 @@ exports.approveWholesale = async (req, res) => {
 
     res.json({ message: `Estado actualizado a ${estado}`, user });
   } catch (error) {
-    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][APPROVE] Error:', error.message);
+    res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -173,14 +215,15 @@ exports.getUsers = async (req, res) => {
 
     const formattedUsers = users.map((user) => ({
       ...user,
-      id: user._id.toString(),
+      id: user._id.toString()
     }));
 
     return res.status(200).json({
-      users: formattedUsers,
+      users: formattedUsers
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][GET-USERS] Error:', error.message);
+    return res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -189,34 +232,42 @@ exports.createUser = async (req, res) => {
   try {
     const { email, password, cuit } = req.body;
 
-    if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
+    if (
+      typeof email !== 'string' ||
+      !email.trim() ||
+      typeof password !== 'string' ||
+      !password
+    ) {
       return res.status(400).json({
-        error: 'El email y la contraseña son obligatorios',
+        error: 'El email y la contraseña son obligatorios'
       });
     }
 
     if (cuit != null && typeof cuit !== 'string') {
-      return res.status(400).json({ error: 'CUIT inv\u00e1lido' });
+      return res.status(400).json({ error: 'CUIT inválido' });
     }
 
     let normalizedCuit = null;
+
     if (cuit && cuit.trim()) {
       const validation = validateCuitModulo11(cuit.trim());
+
       if (!validation.valid) {
         return res.status(400).json({ error: validation.reason });
       }
+
       normalizedCuit = validation.normalized;
     }
 
     const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await User.findOne({
-      email: normalizedEmail,
+      email: normalizedEmail
     });
 
     if (existingUser) {
       return res.status(409).json({
-        error: 'El email ya se encuentra registrado',
+        error: 'El email ya se encuentra registrado'
       });
     }
 
@@ -227,7 +278,7 @@ exports.createUser = async (req, res) => {
       password: hashedPassword,
       rol: 'cliente',
       cuit: normalizedCuit,
-      estado_mayorista: normalizedCuit ? 'PENDIENTE' : 'NO_APLICA',
+      estado_mayorista: normalizedCuit ? 'PENDIENTE' : 'NO_APLICA'
     });
 
     await user.save();
@@ -239,17 +290,19 @@ exports.createUser = async (req, res) => {
       message: 'Usuario creado correctamente',
       user: {
         ...safeUser,
-        id: user._id.toString(),
-      },
+        id: user._id.toString()
+      }
     });
   } catch (error) {
+    console.error('[AUTH][CREATE-USER] Error:', error.message);
+
     if (error.code === 11000) {
       return res.status(409).json({
-        error: 'El email ya se encuentra registrado',
+        error: 'El email ya se encuentra registrado'
       });
     }
 
-    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    return res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -257,23 +310,30 @@ exports.createUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
+
     if (!/^[a-f0-9]{24}$/i.test(id)) {
-      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+      return res.status(400).json({
+        error: 'Identificador de usuario inválido'
+      });
     }
+
     const { email, cuit } = req.body;
-    if ((email !== undefined && typeof email !== 'string') ||
-        (cuit != null && typeof cuit !== 'string')) {
-      return res.status(400).json({ error: 'Datos de usuario inv\u00e1lidos' });
+
+    if (
+      (email !== undefined && typeof email !== 'string') ||
+      (cuit != null && typeof cuit !== 'string')
+    ) {
+      return res.status(400).json({ error: 'Datos de usuario inválidos' });
     }
 
     const user = await User.findOne({
       _id: id,
-      rol: 'cliente',
+      rol: 'cliente'
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuario no encontrado',
+        error: 'Usuario no encontrado'
       });
     }
 
@@ -282,18 +342,18 @@ exports.updateUser = async (req, res) => {
 
       if (!normalizedEmail) {
         return res.status(400).json({
-          error: 'El email no puede estar vacío',
+          error: 'El email no puede estar vacío'
         });
       }
 
       const existingUser = await User.findOne({
         email: normalizedEmail,
-        _id: { $ne: id },
+        _id: { $ne: id }
       });
 
       if (existingUser) {
         return res.status(409).json({
-          error: 'El email ya se encuentra registrado',
+          error: 'El email ya se encuentra registrado'
         });
       }
 
@@ -309,6 +369,7 @@ exports.updateUser = async (req, res) => {
         user.auditoria_ia = { procesado: false };
       } else {
         const validation = validateCuitModulo11(rawCuit);
+
         if (!validation.valid) {
           return res.status(400).json({ error: validation.reason });
         }
@@ -334,17 +395,19 @@ exports.updateUser = async (req, res) => {
       message: 'Usuario actualizado correctamente',
       user: {
         ...safeUser,
-        id: user._id.toString(),
-      },
+        id: user._id.toString()
+      }
     });
   } catch (error) {
+    console.error('[AUTH][UPDATE-USER] Error:', error.message);
+
     if (error.code === 11000) {
       return res.status(409).json({
-        error: 'El email ya se encuentra registrado',
+        error: 'El email ya se encuentra registrado'
       });
     }
 
-    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    return res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -352,26 +415,30 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+
     if (!/^[a-f0-9]{24}$/i.test(id)) {
-      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+      return res.status(400).json({
+        error: 'Identificador de usuario inválido'
+      });
     }
 
     const user = await User.findOneAndDelete({
       _id: id,
-      rol: 'cliente',
+      rol: 'cliente'
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuario no encontrado',
+        error: 'Usuario no encontrado'
       });
     }
 
     return res.status(200).json({
-      message: 'Usuario eliminado correctamente',
+      message: 'Usuario eliminado correctamente'
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][DELETE-USER] Error:', error.message);
+    return res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
@@ -379,22 +446,34 @@ exports.deleteUser = async (req, res) => {
 exports.reAuditCuit = async (req, res) => {
   try {
     const { id } = req.params;
+
     if (!/^[a-f0-9]{24}$/i.test(id)) {
-      return res.status(400).json({ error: 'Identificador de usuario inv\u00e1lido' });
+      return res.status(400).json({
+        error: 'Identificador de usuario inválido'
+      });
     }
 
     const { constanciaBase64, constanciaMimeType } = req.body;
+
     if (!constanciaBase64 || !constanciaMimeType) {
-      return res.status(400).json({ error: 'Debe adjuntar constanciaBase64 y constanciaMimeType' });
+      return res.status(400).json({
+        error: 'Debe adjuntar constanciaBase64 y constanciaMimeType'
+      });
     }
 
-    const user = await User.findOne({ _id: id, rol: 'cliente' });
+    const user = await User.findOne({
+      _id: id,
+      rol: 'cliente'
+    });
+
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     if (!user.cuit) {
-      return res.status(400).json({ error: 'El usuario no tiene un CUIT asignado para auditar' });
+      return res.status(400).json({
+        error: 'El usuario no tiene un CUIT asignado para auditar'
+      });
     }
 
     const auditoriaIa = await cuitAiAuditor.auditCuitDocument({
@@ -417,6 +496,7 @@ exports.reAuditCuit = async (req, res) => {
       }
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    console.error('[AUTH][RE-AUDIT] Error:', error.message);
+    return res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };

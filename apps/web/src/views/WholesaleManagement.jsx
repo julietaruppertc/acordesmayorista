@@ -60,19 +60,43 @@ const userService = DEMO_MODE
       updateWholesaleStatus,
     };
 
+// Detectar si la auditoría está ejecutándose.
+function isAuditInProgress(audit) {
+  return (
+    audit?.procesado === false &&
+    audit?.justificacion
+      ?.toLowerCase()
+      .includes("en curso")
+  );
+}
+
 // Auditoría de CUIT realizada por inteligencia artificial.
 function AuditInfo({ audit }) {
   if (!audit?.procesado) {
+    const inProgress = isAuditInProgress(audit);
+    const hasDocument = Boolean(audit?.justificacion);
+
     return (
       <div className="space-y-1">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+        <span
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+            inProgress
+              ? "bg-blue-50 text-blue-600"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
           <Clock size={13} />
-          REVISIÓN MANUAL
+          {inProgress
+            ? "ANÁLISIS EN PROCESO"
+            : "REVISIÓN MANUAL"}
         </span>
 
         <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-          La auditoría automática no pudo procesar el documento. Se requiere
-          una revisión manual.
+          {inProgress
+            ? "Gemini está analizando la constancia. El resultado aparecerá automáticamente."
+            : hasDocument
+              ? audit.justificacion
+              : "No se adjuntó documentación. Se requiere revisión administrativa."}
         </p>
       </div>
     );
@@ -185,6 +209,30 @@ function WholesaleManagement() {
     loadUsers();
   }, []);
 
+  // Detectar si hay auditorías pendientes de finalización.
+  const hasAuditsInProgress = users.some((user) =>
+    isAuditInProgress(user.auditoria_ia)
+  );
+
+  // Actualizar usuarios automáticamente mientras haya auditorías en curso.
+  useEffect(() => {
+    if (!hasAuditsInProgress) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await userService.getUsers();
+        setUsers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(
+          "Error al actualizar el estado de las auditorías:",
+          err
+        );
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [hasAuditsInProgress]);
+
   // Indicadores.
   const pendingCount = users.filter(
     (user) => user.estado_mayorista === "PENDIENTE"
@@ -208,6 +256,10 @@ function WholesaleManagement() {
 
   const auditedCount = users.filter(
     (user) => Boolean(user.cuit && user.auditoria_ia?.procesado)
+  ).length;
+
+  const processingCount = users.filter(
+    (user) => isAuditInProgress(user.auditoria_ia)
   ).length;
 
   // Búsqueda y filtros.
@@ -817,11 +869,11 @@ function WholesaleManagement() {
               <div className="flex items-center gap-2">
                 <Clock size={18} className="text-orange-600" />
                 <p className="text-sm text-orange-600 font-semibold">
-                  Pendientes de análisis
+                  En proceso
                 </p>
               </div>
               <p className="text-2xl font-extrabold text-[#183B4E] mt-2">
-                {Math.max(0, wholesaleCount - auditedCount)}
+                {processingCount}
               </p>
             </div>
           </div>

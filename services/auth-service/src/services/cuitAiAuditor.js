@@ -51,6 +51,21 @@ const RESPONSE_SCHEMA = {
   ]
 };
 
+function isRetryableError(error) {
+  const msg = String(error?.message || '');
+  return (
+    error?.status === 503 ||
+    error?.status === 429 ||
+    error?.status === 404 ||
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('404') ||
+    msg.includes('UNAVAILABLE') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('NOT_FOUND')
+  );
+}
+
 /**
  * Audita una constancia de inscripción fiscal (ARCA/AFIP) mediante Gemini Vision + Structured Outputs.
  */
@@ -94,28 +109,49 @@ async function auditCuitDocument({ declaredCuit, constanciaBase64, constanciaMim
       'Devuelve APROBAR solo si el CUIT coincide, el documento es legible y la actividad es afín. Devuelve RECHAZAR si el CUIT no coincide o el documento es claramente falso/ajeno. Devuelve REVISION_MANUAL ante dudas.'
     ].join('\n');
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const retryDelaysMs = [2000, 4000, 6000];
+
+    let response;
+    let lastError;
+
+    for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: [
             {
-              inlineData: {
-                mimeType: constanciaMimeType,
-                data: cleanBase64
-              }
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: constanciaMimeType,
+                    data: cleanBase64
+                  }
+                }
+              ]
             }
-          ]
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+            temperature: 0.1
+          }
+        });
+        break;
+      } catch (err) {
+        lastError = err;
+        if (!isRetryableError(err) || attempt === retryDelaysMs.length) {
+          throw err;
         }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.1
+        await new Promise(resolve => setTimeout(resolve, retryDelaysMs[attempt]));
       }
-    });
+    }
+
+    if (!response) {
+      throw lastError;
+    }
 
     const parsed = JSON.parse(response.text);
 
