@@ -6,7 +6,7 @@ const createCorePool = require('./corePool');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const port = Number(process.env.GATEWAY_PORT || 4000);
+const port = Number(process.env.PORT || process.env.GATEWAY_PORT || 4000);
 const authUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:4001';
 const coreUrl = process.env.CORE_SERVICE_URL || 'http://localhost:4002';
 const coreUrls = process.env.CORE_SERVICE_URLS?.split(',').map(value => value.trim());
@@ -47,7 +47,7 @@ const app = createApp({
 });
 async function start() {
   if (corePool) await corePool.start();
-  const server = app.listen(port, () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     console.log(`[GATEWAY] Escuchando en el puerto ${port}`);
   });
   function shutdown() {
