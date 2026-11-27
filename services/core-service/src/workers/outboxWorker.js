@@ -2,7 +2,9 @@ const { pool, withTransaction } = require('../config/database');
 const env = require('../config/env');
 const blockchain = require('../modules/blockchain/blockchain.service');
 
-async function claimOne() {
+async function claimOne({ includeEventTypes, excludeEventTypes } = {}) {
+  const included = includeEventTypes?.length ? includeEventTypes : null;
+  const excluded = excludeEventTypes?.length ? excludeEventTypes : null;
   return withTransaction(async (client) => {
     const result = await client.query(
       `SELECT id, event_type, payload, trace_id, attempts
@@ -15,10 +17,12 @@ async function claimOne() {
               AND locked_at < NOW() - ($2 * INTERVAL '1 second')
             )
           )
+          AND ($3::text[] IS NULL OR event_type = ANY($3::text[]))
+          AND ($4::text[] IS NULL OR NOT (event_type = ANY($4::text[])))
         ORDER BY created_at
         FOR UPDATE SKIP LOCKED
         LIMIT 1`,
-      [env.OUTBOX_MAX_ATTEMPTS, env.OUTBOX_LOCK_TIMEOUT_SECONDS]
+      [env.OUTBOX_MAX_ATTEMPTS, env.OUTBOX_LOCK_TIMEOUT_SECONDS, included, excluded]
     );
     const event = result.rows[0];
     if (!event) return null;
@@ -111,7 +115,7 @@ async function processEvent(event, dependencies = {}) {
 }
 
 async function processOne(dependencies = {}) {
-  const event = await claimOne();
+  const event = await claimOne(dependencies);
   if (!event) return false;
   try {
     const result = await processEvent(event, dependencies);
@@ -123,9 +127,9 @@ async function processOne(dependencies = {}) {
   return true;
 }
 
-async function poll() {
+async function poll(dependencies = {}) {
   try {
-    while (await processOne()) {
+    while (await processOne(dependencies)) {
       // Vacía los eventos disponibles antes de esperar el próximo intervalo.
     }
   } catch (error) {
@@ -134,8 +138,10 @@ async function poll() {
 }
 
 function startWorker() {
-  const timer = setInterval(poll, env.OUTBOX_POLL_INTERVAL_SECONDS * 1000);
-  poll();
+  const dependencies = { excludeEventTypes: ['ATTEST_HIGH_VALUE'] };
+  const run = () => poll(dependencies);
+  const timer = setInterval(run, env.OUTBOX_POLL_INTERVAL_SECONDS * 1000);
+  run();
 
   async function shutdown() {
     clearInterval(timer);

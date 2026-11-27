@@ -54,6 +54,7 @@ if (!parsed.success) {
 if (parsed.data.BLOCKCHAIN_ENABLED) {
   const missing = [];
   if (!parsed.data.BLOCKCHAIN_RPC_URL) missing.push('BLOCKCHAIN_RPC_URL');
+  if (!parsed.data.RELAYER_PRIVATE_KEY) missing.push('RELAYER_PRIVATE_KEY');
   if (!parsed.data.ATTESTATION_CONTRACT_ADDRESS) missing.push('ATTESTATION_CONTRACT_ADDRESS');
   if (missing.length > 0) {
     throw new Error(`Configuración blockchain incompleta: faltan ${missing.join(', ')}.`);

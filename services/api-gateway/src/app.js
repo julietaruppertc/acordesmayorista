@@ -21,7 +21,8 @@ function createApp({
   corePool,
   onCoreSelected,
   publicKey,
-  corsOrigin
+  corsOrigin,
+  authTimeoutMs = 25000
 }) {
   const app = express();
   app.disable('x-powered-by');
@@ -47,15 +48,16 @@ function createApp({
     next();
   });
 
-  // Allow the Vite frontend on either development port.
+  const allowedOrigins = new Set(
+    String(corsOrigin || '')
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean)
+  );
+
   app.use(cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:5174'
-      ];
-
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(origin)) {
         return callback(null, true);
       }
 
@@ -71,11 +73,11 @@ function createApp({
     exposedHeaders: ['X-Trace-Id']
   }));
 
-  const proxyOptions = (target, onUnavailable) => ({
+  const proxyOptions = (target, onUnavailable, timeoutMs = 25000) => ({
     target,
     changeOrigin: true,
-    proxyTimeout: 25000,
-    timeout: 25000,
+    proxyTimeout: timeoutMs,
+    timeout: timeoutMs,
     on: {
       error(_error, _req, res) {
         onUnavailable?.();
@@ -90,7 +92,11 @@ function createApp({
     }
   });
 
-  const authProxy = createProxyMiddleware(proxyOptions(authUrl));
+  // The optional CUIT document audit can call an external AI provider.
+  // It may legitimately take longer than ordinary Core operations.
+  const authProxy = createProxyMiddleware(
+    proxyOptions(authUrl, undefined, authTimeoutMs)
+  );
   const coreProxy = corePool
     ? null
     : createProxyMiddleware(proxyOptions(coreUrl));

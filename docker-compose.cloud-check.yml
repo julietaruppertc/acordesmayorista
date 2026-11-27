@@ -52,6 +52,20 @@ services:
       - core-service
     networks: [cloud-backend]
 
+  blockchain-worker:
+    image: acordes-prueba-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_SSL: "true"
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/blockchainWorker.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
+    networks: [cloud-backend]
+
   reservation-expirer:
     image: acordes-prueba-core-service:latest
     env_file: services/core-service/.env
@@ -73,7 +87,9 @@ services:
       GATEWAY_PORT: 4000
       AUTH_SERVICE_URL: http://auth-service:4001
       CORE_SERVICE_URL: http://core-service:4002
-      CORS_ORIGIN: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000,http://127.0.0.1:3000
+      # Gemini is optional but its external analysis can take longer than a normal API call.
+      AUTH_SERVICE_TIMEOUT_MS: 60000
       PUBLIC_KEY_PATH: /app/shared/keys/public.pem
       NODE_ENV: development
     ports:

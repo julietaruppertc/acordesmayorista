@@ -1,6 +1,6 @@
 # Referencia técnica de Acordes Mayorista
 
-Estado consolidado: 22 de noviembre de 2026. Leer junto con [README](../README.md). Este archivo reemplaza guías históricas, propuestas de proveedores y reportes de sesiones. Documenta lo implementado; los TP y el Plan Integral de Implementación y Trazabilidad siguen siendo las fuentes del alcance académico. La extensión de notarización se detalla en [BLOCKCHAIN-ATTESTATION](BLOCKCHAIN-ATTESTATION.md).
+Estado consolidado: 26 de noviembre de 2026. Leer junto con [README](../README.md). Este archivo reemplaza guías históricas, propuestas de proveedores y reportes de sesiones. Documenta lo implementado; los TP y el Plan Integral de Implementación y Trazabilidad siguen siendo las fuentes del alcance académico.
 
 Ante diferencias entre alcance, contrato y código, explicitar y acordar la resolución antes de modificar comportamiento. No inferir requisitos por recomendaciones de IA ni restaurar una rama antigua sobre cambios recientes. Los contratos JSON canónicos se conservan en shared/contracts/core.
 
@@ -30,13 +30,14 @@ Auth es independiente. Core agrupa módulos de catálogo, inventario, pedidos, p
 | Core API | npm start en services/core-service | 4002 |
 | Expirador | npm run expire-reservations en Core | No abre HTTP |
 | Worker | npm run worker en Core | No abre HTTP |
+| Blockchain Worker | npm run blockchain-worker en Core | No abre HTTP |
 
 API, expirador y worker reutilizan imagen y configuración de persistencia del Core, con comandos diferentes. npm start de Core no inicia los otros dos. Docker puede mostrar 4002/tcp en workers por EXPOSE de la imagen; no significa puerto publicado del host.
 
 | Compose | Datos/uso | Red y automatización |
 | --- | --- | --- |
-| docker-compose.cloud-check.yml | APIs locales con Atlas/Supabase desde .env privados | Worker/expirador automáticos, Gateway solo 127.0.0.1:4000 |
-| docker-compose.test.yml | Proyecto acordes-prueba; Mongo/PostgreSQL locales ficticios | Red interna, Gateway loopback; checks para tests, automation para worker/expirador |
+| docker-compose.cloud-check.yml | APIs locales con Atlas/Supabase desde .env privados | Workers normal/blockchain y expirador automáticos, Gateway solo 127.0.0.1:4000 |
+| docker-compose.test.yml | Proyecto acordes-prueba; Mongo/PostgreSQL locales ficticios | Red interna, Gateway loopback; checks para tests, automation para workers/expirador |
 | docker-compose.balance.yml | Override exclusivo de test para dos réplicas Core | Pool, salud y logs de selección |
 | docker-compose.yml | Variante general con .env privados | Procesos automáticos; publica 4000 en interfaces del host, distinto de cloud-check |
 
@@ -64,10 +65,11 @@ Preparar services/auth-service/.env y services/core-service/.env con las plantil
 | Auth | JWT_EXPIRES_IN | 1h por defecto |
 | Gateway | GATEWAY_PORT | 4000 |
 | Gateway | AUTH_SERVICE_URL | Destino interno Auth |
+| Gateway | AUTH_SERVICE_TIMEOUT_MS | 25000 ms por defecto; ampliar solo para análisis documental opcional de IA |
 | Gateway | CORE_SERVICE_URL | Destino Core único |
 | Gateway | CORE_SERVICE_URLS | Lista opcional separada por comas; activa pool y reemplaza destino único |
 | Gateway | PUBLIC_KEY_PATH | Archivo de pública RSA |
-| Gateway | CORS_ORIGIN | Origen exacto; localhost:3000 en sesión |
+| Gateway | CORS_ORIGIN | Uno o varios orígenes exactos separados por comas; localhost:3000 en sesión |
 | Gateway | CORE_HEALTH_INTERVAL_MS / CORE_HEALTH_TIMEOUT_MS | Sondeos del pool; plantilla 5000/1000 ms |
 | Gateway | CORE_BALANCE_LOG | true registra réplica/traza en la demo |
 | Core | CORE_PORT | 4002 |
@@ -79,11 +81,11 @@ Preparar services/auth-service/.env y services/core-service/.env con las plantil
 | Worker | OUTBOX_POLL_INTERVAL_SECONDS | 5 |
 | Worker | OUTBOX_MAX_ATTEMPTS | 3 en selección existente; ver límites de rollback |
 | Core | PAYMENT_WEBHOOK_SECRET | Privado, mínimo 32 caracteres |
-| Core/Worker | BLOCKCHAIN_ENABLED | false por defecto; habilita pedidos de alto valor |
-| Core/Worker | BLOCKCHAIN_RPC_URL | RPC de Sepolia validado por chainId |
-| Worker | RELAYER_PRIVATE_KEY | Secreto exclusivo de testnet; nunca llega al navegador |
-| Core/Worker | ATTESTATION_CONTRACT_ADDRESS | Contrato público de atestación |
-| Core/Worker | HIGH_VALUE_THRESHOLD_ARS | 2000000 por defecto |
+| Core/Blockchain Worker | BLOCKCHAIN_ENABLED | false por defecto; habilita pedidos de alto valor |
+| Core/Blockchain Worker | BLOCKCHAIN_RPC_URL | RPC de Sepolia validado por chainId |
+| Blockchain Worker | RELAYER_PRIVATE_KEY | Secreto exclusivo de testnet; nunca llega al navegador |
+| Core/Blockchain Worker | ATTESTATION_CONTRACT_ADDRESS | Contrato público de atestación |
+| Core/Blockchain Worker | HIGH_VALUE_THRESHOLD_ARS | 2000000 por defecto |
 | Servidores | NODE_ENV | development en cloud-check, test en base aislada |
 | Frontend | VITE_API_URL | Gateway accesible desde ese navegador |
 | Frontend | VITE_DEMO_MODE | false para pruebas reales |
@@ -200,7 +202,7 @@ HTTP interno tiene timeout de cinco segundos. Un error de transporte no prueba q
 
 Expirador selecciona PENDING_PAYMENT con expires_at<=NOW, ordena por vencimiento y bloquea FOR UPDATE SKIP LOCKED hasta 50 por lote. Libera reservas, aumenta version, marca EXPIRED y encola en una transacción. Fallar una liberación revierte el lote. Revisa al iniciar y 30 segundos después de terminar la revisión anterior, sin superponerse. Backlog puede requerir varios ciclos. Recupera vencidos al reiniciar; cierre espera operación activa y cierra pool.
 
-Worker reclama eventos `PENDING` mediante `FOR UPDATE SKIP LOCKED`, los cambia a `PROCESSING` y libera la transacción antes de ejecutar efectos externos. El lease `locked_at` permite recuperar trabajo abandonado. Para eventos habituales escribe `[NOTIFICACION] <evento> para orden <orderId> | TraceId: <traza>`; para `ATTEST_HIGH_VALUE` invoca el relayer blockchain. Luego marca `PROCESSED` o reintenta hasta `OUTBOX_MAX_ATTEMPTS`. Vacía disponibles al iniciar y sondea cada cinco segundos. No envía correos ni usa broker.
+El Worker normal reclama eventos `PENDING` mediante `FOR UPDATE SKIP LOCKED`, los cambia a `PROCESSING` y libera la transacción antes de ejecutar efectos externos. Procesa eventos habituales y excluye `ATTEST_HIGH_VALUE`; escribe `[NOTIFICACION] <evento> para orden <orderId> | TraceId: <traza>`. El Blockchain Worker reclama exclusivamente `ATTEST_HIGH_VALUE`, invoca el relayer de Sepolia y persiste la evidencia. Así una confirmación lenta de blockchain no detiene las notificaciones del negocio. Ambos recuperan leases mediante `locked_at`, marcan `PROCESSED` o reintentan hasta `OUTBOX_MAX_ATTEMPTS`, arrancan procesando eventos disponibles y luego sondean cada cinco segundos.
 
 | Entidad | Estados relevantes |
 | --- | --- |
@@ -212,7 +214,7 @@ Outbox PENDING no implica pedido pendiente. Consumo normal deja attempts=1, proc
 
 El worker persiste intentos fuera de la transacción del efecto externo, recupera leases abandonados y pasa a `FAILED` al agotar reintentos. La idempotencia del contrato evita duplicar una atestación, pero no se afirma entrega exactamente una vez para cualquier proveedor externo.
 
-Los Compose contemplan worker/expirador con restart: unless-stopped y sin puertos propios publicados. En test están en perfil automation para no consumir fixtures de suites. En Supabase procesan también eventos/pedidos antiguos elegibles; entender ese efecto antes de iniciar sobre datos compartidos.
+Los Compose contemplan worker normal, Blockchain Worker y expirador con restart: unless-stopped y sin puertos propios publicados. En test están en perfil automation para no consumir fixtures de suites. En Supabase procesan también eventos/pedidos antiguos elegibles; entender ese efecto antes de iniciar sobre datos compartidos. Si `BLOCKCHAIN_ENABLED=true`, Core exige RPC, contrato y `RELAYER_PRIVATE_KEY` antes de arrancar.
 
 ## 10. PostgreSQL y seguridad de datos
 
@@ -239,7 +241,7 @@ curl.exe http://127.0.0.1:4000/health
 curl.exe http://127.0.0.1:4000/api/products
 ```
 
-Inicia cinco procesos: Gateway, Auth, Core, worker y expirador. Auth desactiva autoCreate/autoIndex en cloud-check. No inicia bases locales ni ejecuta migraciones/seeds. Reconstruir imágenes tras cambios: git pull no actualiza contenedores ya construidos.
+Inicia seis procesos: Gateway, Auth, Core, worker normal, Blockchain Worker y expirador. Auth desactiva autoCreate/autoIndex en cloud-check. No inicia bases locales ni ejecuta migraciones/seeds. Reconstruir imágenes tras cambios: git pull no actualiza contenedores ya construidos.
 
 Frontend, en otra consola:
 
@@ -290,7 +292,7 @@ El script verifica proyecto/red/bases locales y Gateway loopback; prueba registr
 Automatización manual, después de suites/smoke:
 
 ```powershell
-docker compose -f docker-compose.test.yml --profile automation up -d outbox-worker reservation-expirer
+docker compose -f docker-compose.test.yml --profile automation up -d outbox-worker blockchain-worker reservation-expirer
 ```
 
 Balanceo: con imágenes construidas y sin otro Gateway activo, `node scripts/docker-balance-demo.js`. Usa test+balance, prepara datos locales, demuestra alternancia/caída/recuperación/502 y smoke; termina retirando contenedores. No habilitar automation ni usar cloud-check para esa demo. Si Docker no está en PATH, scripts admiten DOCKER_BIN con su ejecutable.
@@ -342,7 +344,7 @@ Core usa `{error,message,details?,traceId}`: 400 VALIDATION_ERROR de Zod; 409 ST
 
 ## 14. Evidencia y límites
 
-Último lote funcional: 57 tests aprobados de servicios (Auth17/Gateway13/Core27) y 4 del contrato Solidity. Las pruebas administrativas atraviesan webhook HTTP HMAC y PostgreSQL reales: aprobar/reintentar/decisión opuesta, rechazo, roles/validación, flag apagado, decisiones tardías y carrera con expiración. Blockchain agrega umbral alto, evento único, permisos de prueba, reintentos, lease e idempotencia. Las suites se ejecutaron en entornos aislados; la única prueba compartida fue el recorrido punta a punta documentado, no la suite destructiva.
+Último lote funcional: 58 tests aprobados de servicios (Auth17/Gateway14/Core27) y 4 del contrato Solidity. Las pruebas administrativas atraviesan webhook HTTP HMAC y PostgreSQL reales: aprobar/reintentar/decisión opuesta, rechazo, roles/validación, flag apagado, decisiones tardías y carrera con expiración. Blockchain agrega umbral alto, evento único, permisos de prueba, reintentos, lease e idempotencia. Las suites se ejecutaron en entornos aislados; la única prueba compartida fue el recorrido punta a punta documentado, no la suite destructiva.
 
 Frontend compilado y Edge visible con dos contextos: cliente envía, admin lista/resuelve, cliente observa PAID/PAYMENT_FAILED/EXPIRED, stock/eventos correctos y sin errores JavaScript en ese recorrido. Se comprobó expiresAt a 300 segundos; para probar el daemon se adelantó solo el vencimiento del fixture local y se observó su detección automática. No se presenta como espera cronometrada completa ni auditoría de todas las pantallas.
 

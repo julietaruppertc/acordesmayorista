@@ -16,7 +16,7 @@ Esta guía explica el funcionamiento general. Para instalar, integrar, modificar
 - Controles de concurrencia, pagos duplicados, permisos, trazabilidad y balanceo entre réplicas del Core.
 - Extensión opcional para notarizar en Sepolia los pedidos de alto valor mediante Transactional Outbox.
 
-La implementación blockchain está documentada en [Notarización blockchain](docs/BLOCKCHAIN-ATTESTATION.md). El contrato está desplegado en Sepolia en `0x0840CB12A12BeB5a1F8613dD19764545753824f7`; PostgreSQL sigue siendo la fuente de verdad y los secretos permanecen fuera de Git.
+La certificación blockchain está integrada en esta guía y en la referencia técnica. El contrato está desplegado en Sepolia en `0x0840CB12A12BeB5a1F8613dD19764545753824f7`; PostgreSQL sigue siendo la fuente de verdad y los secretos permanecen fuera de Git.
 
 ## Cómo se conecta
 
@@ -29,9 +29,10 @@ flowchart TD
     GW --> CORE[Core: catálogo, stock, pedidos y pagos]
     CORE --> PG[(PostgreSQL / Supabase)]
     EXP[Expirador automático] --> PG
-    WORK[Worker de notificaciones] --> PG
-    WORK --> LOG[Notificación simulada en consola]
-    WORK -->|Solo alto valor y función habilitada| EVM[Contrato de atestación en Sepolia]
+    OUTBOX[Worker de notificaciones] --> PG
+    OUTBOX --> LOG[Notificación simulada en consola]
+    CHAIN[Blockchain Worker] --> PG
+    CHAIN -->|Solo alto valor y función habilitada| EVM[Contrato de atestación en Sepolia]
 ```
 
 Gateway verifica identidad y permisos. Auth administra exclusivamente usuarios; Core administra los datos del negocio. El navegador no se conecta directamente a las bases.
@@ -118,7 +119,7 @@ No borra las bases cloud. La referencia técnica cubre instalación inicial, pru
 
 ## Evidencia y límites
 
-Se ejecutaron 57 pruebas automáticas de servicios: 17 Auth, 13 Gateway y 27 Core, además de 4 pruebas del contrato Solidity. Cubren permisos, reservas, rollback, diez checkouts por una unidad, pagos firmados, duplicados, decisiones tardías, carreras con el expirador, lease del worker, idempotencia y atestación de alto valor. Se compiló y recorrió en Edge confirmación/rechazo/vencimiento con persistencia. El worker continuo se probó en base aislada y también completó una atestación real en Sepolia.
+Se ejecutaron 58 pruebas automáticas de servicios: 17 Auth, 14 Gateway y 27 Core, además de 4 pruebas del contrato Solidity. Cubren permisos, CORS configurable, reservas, rollback, pagos firmados, duplicados, decisiones tardías, carreras con el expirador, lease del worker, idempotencia y atestación de alto valor. Se compiló y recorrió en Edge confirmación/rechazo/vencimiento con persistencia. Los workers normal y blockchain se probaron en base aislada; la atestación real en Sepolia se realiza solo de forma coordinada.
 
 El balanceo se demostró localmente con dos réplicas, caída y recuperación. No se acreditaron 250 usuarios, tiempos bajo esa carga ni disponibilidad del 99,5 %.
 

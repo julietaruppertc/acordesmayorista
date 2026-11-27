@@ -65,7 +65,12 @@ before(async () => {
   const authUrl = await listen(authServer);
   const coreUrl = await listen(coreServer);
   gatewayServer = http.createServer(
-    createApp({ authUrl, coreUrl, publicKey, corsOrigin: 'http://localhost:3000' })
+    createApp({
+      authUrl,
+      coreUrl,
+      publicKey,
+      corsOrigin: 'http://localhost:3000,http://localhost:5173'
+    })
   );
   gatewayUrl = await listen(gatewayServer);
 });
@@ -84,6 +89,14 @@ test('health del Gateway genera un trace id', async () => {
   assert.equal(result.status, 200);
   assert.equal(result.body.service, 'api-gateway');
   assert.equal(result.headers.get('x-trace-id'), result.body.traceId);
+});
+
+test('CORS respeta los orígenes configurados por entorno', async () => {
+  for (const origin of ['http://localhost:3000', 'http://localhost:5173']) {
+    const response = await fetch(`${gatewayUrl}/health`, { headers: { Origin: origin } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('access-control-allow-origin'), origin);
+  }
 });
 
 test('rutea login y catálogo conservando ruta y traza, sin aceptar identidad del cliente', async () => {

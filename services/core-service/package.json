@@ -11,6 +11,7 @@
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "worker": "node src/workers/outboxWorker.js",
+    "blockchain-worker": "node src/workers/blockchainWorker.js",
     "expire-reservations": "node src/jobs/expireReservations.js",
     "demo:critical": "node scripts/demoCriticalFlows.js",
     "test": "vitest run --globals",

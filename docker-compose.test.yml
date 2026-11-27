@@ -89,6 +89,20 @@ services:
         condition: service_healthy
     networks: [test-backend]
 
+  blockchain-worker:
+    profiles: [automation]
+    image: acordes-prueba-core-service:latest
+    environment:
+      <<: *core-env
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/blockchainWorker.js]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [test-backend]
+
   reservation-expirer:
     profiles: [automation]
     image: acordes-prueba-core-service:latest

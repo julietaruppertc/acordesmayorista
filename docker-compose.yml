@@ -34,6 +34,18 @@ services:
       - core-service
     networks: [backend]
 
+  blockchain-worker:
+    image: acordes-mayorista-core-service:latest
+    env_file: services/core-service/.env
+    environment:
+      OUTBOX_POLL_INTERVAL_SECONDS: 5
+      OUTBOX_MAX_ATTEMPTS: 3
+    command: [node, src/workers/blockchainWorker.js]
+    restart: unless-stopped
+    depends_on:
+      - core-service
+    networks: [backend]
+
   reservation-expirer:
     image: acordes-mayorista-core-service:latest
     env_file: services/core-service/.env

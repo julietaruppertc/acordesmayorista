@@ -11,6 +11,7 @@ const authUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:4001';
 const coreUrl = process.env.CORE_SERVICE_URL || 'http://localhost:4002';
 const coreUrls = process.env.CORE_SERVICE_URLS?.split(',').map(value => value.trim());
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const authTimeoutMs = Number(process.env.AUTH_SERVICE_TIMEOUT_MS || 25000);
 const publicKeyPath = process.env.PUBLIC_KEY_PATH
   ? path.resolve(__dirname, '..', process.env.PUBLIC_KEY_PATH)
   : path.resolve(__dirname, '../../../shared/keys/public.pem');
@@ -24,6 +25,9 @@ for (const [name, value] of [['AUTH_SERVICE_URL', authUrl], ['CORE_SERVICE_URL',
     throw new Error(`${name} debe ser una URL base HTTP(S) sin ruta ni parámetros.`);
   }
 }
+if (!Number.isInteger(authTimeoutMs) || authTimeoutMs < 1000 || authTimeoutMs > 120000) {
+  throw new Error('AUTH_SERVICE_TIMEOUT_MS debe estar entre 1000 y 120000 milisegundos.');
+}
 
 const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
 const corePool = coreUrls ? createCorePool(coreUrls, {
@@ -32,7 +36,15 @@ const corePool = coreUrls ? createCorePool(coreUrls, {
 }) : null;
 const onCoreSelected = process.env.CORE_BALANCE_LOG === 'true'
   ? (target, traceId) => console.log(`[BALANCE] ${traceId} -> ${target}`) : undefined;
-const app = createApp({ authUrl, coreUrl, corePool, onCoreSelected, publicKey, corsOrigin });
+const app = createApp({
+  authUrl,
+  coreUrl,
+  corePool,
+  onCoreSelected,
+  publicKey,
+  corsOrigin,
+  authTimeoutMs
+});
 async function start() {
   if (corePool) await corePool.start();
   const server = app.listen(port, () => {
