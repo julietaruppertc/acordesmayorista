@@ -51,6 +51,18 @@ const RESPONSE_SCHEMA = {
   ]
 };
 
+function isTransientError(error) {
+  const msg = String(error?.message || '');
+  return (
+    error?.status === 503 ||
+    error?.status === 429 ||
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('UNAVAILABLE') ||
+    msg.includes('RESOURCE_EXHAUSTED')
+  );
+}
+
 /**
  * Audita una constancia de inscripción fiscal (ARCA/AFIP) mediante Gemini Vision + Structured Outputs.
  */
@@ -94,28 +106,47 @@ async function auditCuitDocument({ declaredCuit, constanciaBase64, constanciaMim
       'Devuelve APROBAR solo si el CUIT coincide, el documento es legible y la actividad es afín. Devuelve RECHAZAR si el CUIT no coincide o el documento es claramente falso/ajeno. Devuelve REVISION_MANUAL ante dudas.'
     ].join('\n');
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const candidateModels = [...new Set([primaryModel, 'gemini-2.5-flash', 'gemini-3.8-flash'])];
+
+    let response;
+    let lastError;
+
+    for (const model of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: [
             {
-              inlineData: {
-                mimeType: constanciaMimeType,
-                data: cleanBase64
-              }
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: constanciaMimeType,
+                    data: cleanBase64
+                  }
+                }
+              ]
             }
-          ]
-        }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.1
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+            temperature: 0.1
+          }
+        });
+        break;
+      } catch (err) {
+        lastError = err;
+        if (!isTransientError(err)) throw err;
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
-    });
+    }
+
+    if (!response) {
+      throw lastError;
+    }
 
     const parsed = JSON.parse(response.text);
 
