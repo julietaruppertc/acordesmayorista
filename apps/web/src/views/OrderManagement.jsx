@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck, ExternalLink } from 'lucide-react';
 
@@ -84,6 +84,8 @@ export default function OrderManagement() {
   const [blockchainOrderId, setBlockchainOrderId] = useState(null);
   const [blockchainLoading, setBlockchainLoading] = useState(false);
 
+  const blockchainSectionRef = useRef(null);
+
   useEffect(() => {
     let alive = true;
     let timer;
@@ -118,6 +120,15 @@ export default function OrderManagement() {
       clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!blockchainOrderId) return;
+
+    blockchainSectionRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [blockchainOrderId]);
 
   async function decide(order, decision) {
     if (busy) return;
@@ -370,7 +381,8 @@ export default function OrderManagement() {
 
         {blockchainOrderId && (
           <section
-            className="bg-white border border-[#E8E3DA] rounded-2xl p-6 mt-6"
+            ref={blockchainSectionRef}
+            className="bg-white border border-[#E8E3DA] rounded-2xl p-6 mt-6 scroll-mt-24"
             aria-label="Certificación blockchain"
           >
             <div className="flex items-center gap-2 mb-4">
