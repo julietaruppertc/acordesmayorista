@@ -7,8 +7,8 @@ const { validateCuitModulo11 } = require('../utils/cuitValidator');
 const cuitAiAuditor = require('../services/cuitAiAuditor');
 
 // Cargar claves RSA
-const privateKeyPath = path.join(__dirname, '../../../../shared/keys/private.pem');
-const publicKeyPath = path.join(__dirname, '../../../../shared/keys/public.pem');
+const privateKeyPath = process.env.PRIVATE_KEY_PATH || path.join(__dirname, '../../../../shared/keys/private.pem');
+const publicKeyPath = process.env.PUBLIC_KEY_PATH || path.join(__dirname, '../../../../shared/keys/public.pem');
 
 let privateKey = '';
 let publicKey = '';
