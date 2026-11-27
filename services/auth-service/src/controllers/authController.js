@@ -47,15 +47,12 @@ exports.register = async (req, res) => {
 
     // Si envía CUIT, requiere validación de mayorista (RF-01) - Human-in-the-Loop
     const estadoMayorista = normalizedCuit ? 'PENDIENTE' : 'NO_APLICA';
+    const hasConstancia = Boolean(normalizedCuit && constanciaBase64 && constanciaMimeType);
 
-    let auditoriaIa = { procesado: false };
-    if (normalizedCuit && constanciaBase64 && constanciaMimeType) {
-      auditoriaIa = await cuitAiAuditor.auditCuitDocument({
-        declaredCuit: normalizedCuit,
-        constanciaBase64,
-        constanciaMimeType
-      });
-    }
+    const auditoriaIa = {
+      procesado: false,
+      justificacion: hasConstancia ? 'Análisis documental en curso...' : null
+    };
 
     const user = new User({
       email,
@@ -79,8 +76,25 @@ exports.register = async (req, res) => {
         auditoria_ia: user.auditoria_ia
       }
     });
+
+    if (hasConstancia) {
+      cuitAiAuditor
+        .auditCuitDocument({
+          declaredCuit: normalizedCuit,
+          constanciaBase64,
+          constanciaMimeType
+        })
+        .then(async (resultadoAuditoria) => {
+          await User.findByIdAndUpdate(user._id, {
+            $set: { auditoria_ia: resultadoAuditoria }
+          });
+        })
+        .catch((err) => {
+          console.error('[AUTH][AI-AUDITOR] Error en auditoría asíncrona:', err.message);
+        });
+    }
   } catch (error) {
-    res.status(500).json({ error: 'Ocurri\u00f3 un error interno.' });
+    res.status(500).json({ error: 'Ocurrió un error interno.' });
   }
 };
 
