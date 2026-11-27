@@ -23,11 +23,11 @@ import {
 } from "lucide-react";
 
 import Login from "./views/Login.jsx";
-
 import Catalog from "./views/Catalog.jsx";
 import Cart from "./views/Cart.jsx";
 import Checkout from "./views/Checkout.jsx";
 import OrderManagement from "./views/OrderManagement.jsx";
+import MyOrders from "./views/MyOrders.jsx";
 import Payment from "./views/Payment.jsx";
 import OperatorStock from "./views/OperatorStock.jsx";
 import WholesaleManagement from "./views/WholesaleManagement.jsx";
@@ -49,7 +49,6 @@ function Navbar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Ocultar enlaces de autenticación en Login/Registro
   const isAuthPage = location.pathname === "/login";
 
   const handleLogout = () => {
@@ -72,17 +71,30 @@ function Navbar() {
 
           {/* MENÚ ESCRITORIO */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-[#183B4E]">
-
             <Link to="/" className="hover:text-[#20B8A5] transition">
               Inicio
             </Link>
 
-            <Link to="/#catalogo" className="hover:text-[#20B8A5] transition">
+            <Link
+              to="/#catalogo"
+              className="hover:text-[#20B8A5] transition"
+            >
               Catálogo
             </Link>
 
             {user ? (
               <>
+                {/* CLIENTE */}
+                {user.rol === "cliente" && (
+                  <Link
+                    to="/mis-pedidos"
+                    className="hover:text-[#20B8A5] transition"
+                  >
+                    Mis pedidos
+                  </Link>
+                )}
+
+                {/* OPERADOR */}
                 {user.rol === "operador" && (
                   <Link
                     to="/operador/stock"
@@ -92,6 +104,7 @@ function Navbar() {
                   </Link>
                 )}
 
+                {/* ADMINISTRADOR */}
                 {user.rol === "admin" && (
                   <>
                     <Link
@@ -131,23 +144,18 @@ function Navbar() {
               </>
             ) : (
               !isAuthPage && (
-                <>
-                  <Link
-                    to="/login"
-                    className="hover:text-[#20B8A5] transition"
-                  >
-                    Iniciar sesión
-                  </Link>
-
-                 
-                </>
+                <Link
+                  to="/login"
+                  className="hover:text-[#20B8A5] transition"
+                >
+                  Iniciar sesión
+                </Link>
               )
             )}
           </nav>
 
           {/* ACCIONES */}
           <div className="flex items-center gap-3">
-
             <Link
               to="/carrito"
               onClick={closeMenu}
@@ -178,7 +186,6 @@ function Navbar() {
         {/* MENÚ CELULAR */}
         {menuOpen && (
           <nav className="lg:hidden mt-4 pt-4 border-t border-[#E8E3DA] flex flex-col gap-1 text-sm font-semibold text-[#183B4E]">
-
             <Link
               to="/"
               onClick={closeMenu}
@@ -203,6 +210,19 @@ function Navbar() {
                   {user.email}
                 </div>
 
+                {/* CLIENTE */}
+                {user.rol === "cliente" && (
+                  <Link
+                    to="/mis-pedidos"
+                    onClick={closeMenu}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F7F3]"
+                  >
+                    <ClipboardList size={18} />
+                    Mis pedidos
+                  </Link>
+                )}
+
+                {/* OPERADOR */}
                 {user.rol === "operador" && (
                   <Link
                     to="/operador/stock"
@@ -214,6 +234,7 @@ function Navbar() {
                   </Link>
                 )}
 
+                {/* ADMINISTRADOR */}
                 {user.rol === "admin" && (
                   <>
                     <Link
@@ -340,21 +361,30 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
 
+        {/* RUTAS PARA USUARIOS AUTENTICADOS */}
         <Route element={<ProtectedRoute />}>
           <Route path="/carrito" element={<Cart />} />
           <Route path="/solicitud-pendiente" element={<WholesaleStatus />} />
           <Route path="/solicitud-rechazada" element={<WholesaleStatus />} />
         </Route>
 
+        {/* PEDIDOS DEL CLIENTE */}
+        <Route element={<ProtectedRoute allowedRoles={["cliente"]} />}>
+          <Route path="/mis-pedidos" element={<MyOrders />} />
+        </Route>
+
+        {/* COMPRAS */}
         <Route element={<ProtectedRoute requireApprovedWholesale />}>
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/pago" element={<Payment />} />
         </Route>
 
+        {/* OPERADOR */}
         <Route element={<ProtectedRoute allowedRoles={["operador", "admin"]} />}>
           <Route path="/operador/stock" element={<OperatorStock />} />
         </Route>
 
+        {/* ADMINISTRADOR */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/operador/usuarios" element={<WholesaleManagement />} />
           <Route path="/admin/pedidos" element={<OrderManagement />} />
