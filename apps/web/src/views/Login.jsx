@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -162,10 +161,11 @@ function Login() {
         setAuditResult(auditoria);
       }
 
+      // Confirmar el registro y luego volver automáticamente al inicio de sesión.
       setSuccess(
         isWholesale
-          ? "¡Solicitud enviada! Tu cuenta mayorista quedó pendiente de aprobación."
-          : "¡Tu cuenta particular fue creada exitosamente!"
+          ? "¡Registro exitoso! Tu solicitud de cuenta mayorista fue enviada y quedó pendiente de aprobación. En unos segundos podrás iniciar sesión."
+          : "¡Registro exitoso! Tu cuenta fue creada correctamente. En unos segundos podrás iniciar sesión."
       );
 
       setTimeout(() => {
@@ -174,7 +174,8 @@ function Login() {
         setPassword("");
         setConstancia(null);
         setAuditResult(null);
-      }, 7000);
+        setValidationError("");
+      }, 4000);
     } catch {
       // El error se muestra desde useAuth.
     }

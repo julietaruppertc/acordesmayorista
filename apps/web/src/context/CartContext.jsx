@@ -10,6 +10,8 @@ import { useAuthContext } from "./AuthContext";
 
 const CartContext = createContext(null);
 
+const GUEST_CART_KEY = "acordes_cart_guest";
+
 // Obtener el carrito guardado para una cuenta.
 const getSavedCart = (storageKey) => {
   try {
@@ -21,26 +23,106 @@ const getSavedCart = (storageKey) => {
   }
 };
 
+// Obtener stock de un producto.
+const getAvailableStock = (product) => {
+  return Number(product.availableStock ?? product.stock ?? 0);
+};
+
+// Fusionar dos carritos sin duplicar productos.
+const mergeCarts = (userCart, guestCart) => {
+  const mergedCart = [...userCart];
+
+  guestCart.forEach((guestItem) => {
+    const existingProduct = mergedCart.find(
+      (item) => item.id === guestItem.id
+    );
+
+    if (existingProduct) {
+      const stock = getAvailableStock(existingProduct);
+      const combinedQuantity =
+        existingProduct.quantity + guestItem.quantity;
+
+      mergedCart.splice(
+        mergedCart.indexOf(existingProduct),
+        1,
+        {
+          ...existingProduct,
+          quantity:
+            stock > 0
+              ? Math.min(combinedQuantity, stock)
+              : combinedQuantity,
+        }
+      );
+    } else {
+      const stock = getAvailableStock(guestItem);
+
+      mergedCart.push({
+        ...guestItem,
+        quantity:
+          stock > 0
+            ? Math.min(guestItem.quantity, stock)
+            : guestItem.quantity,
+      });
+    }
+  });
+
+  return mergedCart;
+};
+
 export function CartProvider({ children }) {
   const { user } = useAuthContext();
 
   // Cada usuario tiene una clave de almacenamiento independiente.
   const storageKey = user?.id
     ? `acordes_cart_user_${user.id}`
-    : "acordes_cart_guest";
+    : GUEST_CART_KEY;
 
   const [cartState, setCartState] = useState(() => ({
     storageKey,
     items: getSavedCart(storageKey),
   }));
 
-  // Recuperar el carrito cuando cambia la cuenta.
+  // Recuperar o fusionar el carrito cuando cambia la sesión.
   useEffect(() => {
-    setCartState({
-      storageKey,
-      items: getSavedCart(storageKey),
-    });
-  }, [storageKey]);
+    if (user?.id) {
+      const guestCart = getSavedCart(GUEST_CART_KEY);
+      const userCart = getSavedCart(storageKey);
+
+      // Al iniciar sesión, fusionar el carrito de invitado
+      // con el carrito personal de la cuenta.
+      const mergedCart = mergeCarts(userCart, guestCart);
+
+      try {
+        // Guardar primero el carrito fusionado en la cuenta.
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(mergedCart)
+        );
+
+        // Eliminar el carrito de invitado solo después
+        // de haber guardado correctamente la fusión.
+        if (guestCart.length > 0) {
+          localStorage.removeItem(GUEST_CART_KEY);
+        }
+      } catch (error) {
+        console.error(
+          "No se pudo fusionar el carrito:",
+          error
+        );
+      }
+
+      setCartState({
+        storageKey,
+        items: mergedCart,
+      });
+    } else {
+      // Si cierra sesión, recuperar solo el carrito invitado.
+      setCartState({
+        storageKey,
+        items: getSavedCart(storageKey),
+      });
+    }
+  }, [storageKey, user?.id]);
 
   // Evitar mostrar el carrito de otra cuenta durante el cambio de sesión.
   const cart =
@@ -61,11 +143,6 @@ export function CartProvider({ children }) {
       console.error("No se pudo guardar el carrito:", error);
     }
   }, [cartState, storageKey]);
-
-  // Obtener el stock disponible.
-  const getAvailableStock = (product) => {
-    return Number(product.availableStock ?? product.stock ?? 0);
-  };
 
   // Agregar un producto al carrito.
   const addToCart = (product) => {
